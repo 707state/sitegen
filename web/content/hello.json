@@ -1,0 +1,5 @@
+{
+  "title": "Hello from JSON",
+  "html": "<h2>这是从 JSON 里注入的 HTML</h2><p><b>粗体</b>、<i>斜体</i>、<code>code</code></p><ul><li>Item A</li><li>Item B</li></ul>"
+}
+
