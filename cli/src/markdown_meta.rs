@@ -3,6 +3,7 @@ use comrak::{Arena, Options, nodes::NodeValue};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
     time::UNIX_EPOCH,
@@ -26,15 +27,11 @@ pub struct Markdown {
 }
 
 #[derive(Debug, Serialize)]
-struct ProcessingError {
-    path: PathBuf,
-    message: String,
-}
-
-#[derive(Debug, Serialize)]
 pub struct Index {
-    generated_at_unix: u64,
-    items: Vec<Markdown>,
+    paragraph_under_certain_topic: HashMap<String, Vec<String>>,
+    table_of_content: Vec<String>,
+    #[serde(skip_serializing)]
+    markdowns: Vec<Markdown>,
 }
 
 pub fn is_markdown(path: &Path) -> bool {
@@ -97,22 +94,99 @@ impl TryFrom<PathBuf> for Markdown {
         })
     }
 }
-impl ProcessingError {
-    pub fn new() -> Self {
-        ProcessingError {
-            path: PathBuf::new(),
-            message: String::new(),
-        }
-    }
+
+struct BuiltMarkdown {
+    markdown: Markdown,
+    out_path: PathBuf,
 }
-impl fmt::Display for ProcessingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Process file: {} generated an error: {}",
-            self.path.display(),
-            self.message
-        )
+
+fn build_markdown_and_write_json(path: &Path, dist_dir: &Path) -> anyhow::Result<BuiltMarkdown> {
+    // 1) 转成 Markdown
+    let one_md: Markdown = path
+        .to_path_buf()
+        .try_into()
+        .with_context(|| format!("convert markdown failed: {}", path.display()))?;
+
+    // 2) 计算输出路径
+    let rel = path
+        .strip_prefix(std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+        .unwrap_or(path);
+
+    let mut out_path = dist_dir.join(rel);
+    out_path.set_extension("json");
+
+    if let Some(parent) = out_path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("create parent dir failed: {}", parent.display()))?;
+    }
+
+    // 3) 写 json
+    let json = serde_json::to_string_pretty(&one_md).context("serde_json serialize failed")?;
+    fs::write(&out_path, json)
+        .with_context(|| format!("write to {} failed", out_path.display()))?;
+
+    Ok(BuiltMarkdown {
+        markdown: one_md,
+        out_path,
+    })
+}
+impl TryFrom<Vec<PathBuf>> for Index {
+    type Error = anyhow::Error;
+    fn try_from(paths: Vec<PathBuf>) -> anyhow::Result<Self> {
+        let dist_dir = PathBuf::from("dist");
+        fs::create_dir_all(&dist_dir).context("failed to create dist/")?;
+        let mut paragraph_under_certain_topic: HashMap<String, Vec<String>> = HashMap::new();
+        let mut markdowns: Vec<Markdown> = Vec::new();
+        let mut table_of_content: Vec<String> = Vec::new();
+        for path in paths {
+            if !path.exists() {
+                eprintln!("Skip: {} (not exists)", path.display());
+                continue;
+            }
+            if path.is_file() && is_markdown(&path) {
+                let built_md = build_markdown_and_write_json(&path, &dist_dir)?;
+                let title = built_md.markdown.metadata.title.clone();
+                for tag in &built_md.markdown.metadata.tags {
+                    paragraph_under_certain_topic
+                        .entry(tag.clone())
+                        .or_default()
+                        .push(title.clone());
+                }
+                table_of_content.push(title);
+                markdowns.push(built_md.markdown);
+            }
+            for entry in walkdir::WalkDir::new(&path).follow_links(false) {
+                let entry = match entry {
+                    Ok(e) => e,
+                    Err(e) => {
+                        eprintln!("Walk error under {}: {e}", path.display());
+                        continue;
+                    }
+                };
+                if !entry.file_type().is_file() {
+                    continue;
+                }
+                let md_path = entry.path();
+                if !is_markdown(md_path) {
+                    continue;
+                }
+                let built_md = build_markdown_and_write_json(&path, &dist_dir)?;
+                let title = built_md.markdown.metadata.title.clone();
+                for tag in &built_md.markdown.metadata.tags {
+                    paragraph_under_certain_topic
+                        .entry(tag.clone())
+                        .or_default()
+                        .push(title.clone());
+                }
+                table_of_content.push(title);
+                markdowns.push(built_md.markdown);
+            }
+        }
+        Ok(Self {
+            table_of_content,
+            paragraph_under_certain_topic,
+            markdowns,
+        })
     }
 }
 
