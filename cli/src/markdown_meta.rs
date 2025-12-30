@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
+use chrono::NaiveDate;
 use comrak::{Arena, Options, nodes::NodeValue};
-use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -14,7 +14,7 @@ pub struct FrontMatter {
     pub title: String,
     pub author: String,
     pub tags: Vec<String>,
-    pub date: Option<String>,
+    pub date: Option<NaiveDate>,
 }
 #[derive(Debug, Serialize)]
 pub struct Markdown {
@@ -29,11 +29,16 @@ pub struct Markdown {
 #[derive(Debug, Serialize)]
 pub struct Index {
     paragraph_under_certain_topic: HashMap<String, Vec<String>>,
-    table_of_content: Vec<String>,
+    table_of_content: Vec<TableOfContentItem>,
     #[serde(skip_serializing)]
     markdowns: Vec<Markdown>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct TableOfContentItem {
+    title: String,
+    path: String,
+}
 pub fn is_markdown(path: &Path) -> bool {
     path.extension()
         .and_then(|s| s.to_str())
@@ -137,7 +142,7 @@ impl TryFrom<Vec<PathBuf>> for Index {
         fs::create_dir_all(&dist_dir).context("failed to create dist/")?;
         let mut paragraph_under_certain_topic: HashMap<String, Vec<String>> = HashMap::new();
         let mut markdowns: Vec<Markdown> = Vec::new();
-        let mut table_of_content: Vec<String> = Vec::new();
+        let mut table_of_content: Vec<TableOfContentItem> = Vec::new();
         for path in paths {
             if !path.exists() {
                 eprintln!("Skip: {} (not exists)", path.display());
@@ -146,13 +151,17 @@ impl TryFrom<Vec<PathBuf>> for Index {
             if path.is_file() && is_markdown(&path) {
                 let built_md = build_markdown_and_write_json(&path, &dist_dir)?;
                 let title = built_md.markdown.metadata.title.clone();
+                let rel_path = relative_json_path(&built_md.out_path, &dist_dir);
                 for tag in &built_md.markdown.metadata.tags {
                     paragraph_under_certain_topic
                         .entry(tag.clone())
                         .or_default()
                         .push(title.clone());
                 }
-                table_of_content.push(title);
+                table_of_content.push(TableOfContentItem {
+                    title,
+                    path: rel_path,
+                });
                 markdowns.push(built_md.markdown);
             }
             for entry in walkdir::WalkDir::new(&path).follow_links(false) {
@@ -170,23 +179,32 @@ impl TryFrom<Vec<PathBuf>> for Index {
                 if !is_markdown(md_path) {
                     continue;
                 }
-                let built_md = build_markdown_and_write_json(&path, &dist_dir)?;
+                let built_md = build_markdown_and_write_json(md_path, &dist_dir)?;
                 let title = built_md.markdown.metadata.title.clone();
+                let rel_path = relative_json_path(&built_md.out_path, &dist_dir);
                 for tag in &built_md.markdown.metadata.tags {
                     paragraph_under_certain_topic
                         .entry(tag.clone())
                         .or_default()
                         .push(title.clone());
                 }
-                table_of_content.push(title);
+                table_of_content.push(TableOfContentItem {
+                    title,
+                    path: rel_path,
+                });
                 markdowns.push(built_md.markdown);
             }
         }
-        Ok(Self {
+        let index = Self {
             table_of_content,
             paragraph_under_certain_topic,
             markdowns,
-        })
+        };
+        let index_path = dist_dir.join("index.json");
+        let index_json = serde_json::to_string_pretty(&index).context("serialize index failed")?;
+        fs::write(&index_path, index_json)
+            .with_context(|| format!("write to {} failed", index_path.display()))?;
+        Ok(index)
     }
 }
 
@@ -198,4 +216,9 @@ fn extract_front_matter_from_ast<'a>(root: &'a comrak::nodes::AstNode<'a>) -> Op
         }
     }
     None
+}
+
+fn relative_json_path(path: &Path, dist_dir: &Path) -> String {
+    let rel = path.strip_prefix(dist_dir).unwrap_or(path);
+    rel.to_string_lossy().into_owned()
 }
