@@ -1,5 +1,5 @@
 use crate::components::{
-    PostPayload, error_view::ErrorView, home_view::HomeView, loading_view::LoadingView,
+    PostPayload, TocItem, error_view::ErrorView, home_view::HomeView, loading_view::LoadingView,
     post_view::PostView,
 };
 use gloo_net::http::Request;
@@ -9,17 +9,10 @@ use yew::prelude::*;
 pub mod components;
 
 #[derive(Debug, Clone, Deserialize)]
-struct TocItem {
-    title: String,
-    path: String,
+pub struct IndexPayload {
+    pub paragraph_under_certain_topic: HashMap<String, Vec<String>>,
+    pub table_of_content: Vec<TocItem>,
 }
-
-#[derive(Debug, Clone, Deserialize)]
-struct IndexPayload {
-    paragraph_under_certain_topic: HashMap<String, Vec<String>>,
-    table_of_content: Vec<TocItem>,
-}
-
 #[function_component(App)]
 fn app() -> Html {
     let index = use_state(|| None::<IndexPayload>);
@@ -131,10 +124,11 @@ fn app() -> Html {
         .map(|(k, v)| (k.clone(), v.clone()))
         .collect();
     topics.sort_by(|a, b| a.0.cmp(&b.0));
-
+    let toc_items = index_payload.table_of_content;
     let expanded = (*expanded_topics).clone();
     html! {
         <HomeView
+            toc_items={toc_items}
             topics={topics}
             title_to_path={title_to_path}
             expanded_topics={expanded}

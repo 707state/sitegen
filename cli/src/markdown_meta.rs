@@ -14,7 +14,7 @@ pub struct FrontMatter {
     pub title: String,
     pub author: String,
     pub tags: Vec<String>,
-    pub date: Option<NaiveDate>,
+    pub date: NaiveDate,
 }
 #[derive(Debug, Serialize)]
 pub struct Markdown {
@@ -38,6 +38,7 @@ pub struct Index {
 pub struct TableOfContentItem {
     title: String,
     path: String,
+    date: NaiveDate,
 }
 pub fn is_markdown(path: &Path) -> bool {
     path.extension()
@@ -161,6 +162,7 @@ impl TryFrom<Vec<PathBuf>> for Index {
                 table_of_content.push(TableOfContentItem {
                     title,
                     path: rel_path,
+                    date: built_md.markdown.metadata.date,
                 });
                 markdowns.push(built_md.markdown);
             }
@@ -191,10 +193,12 @@ impl TryFrom<Vec<PathBuf>> for Index {
                 table_of_content.push(TableOfContentItem {
                     title,
                     path: rel_path,
+                    date: built_md.markdown.metadata.date,
                 });
                 markdowns.push(built_md.markdown);
             }
         }
+        table_of_content.sort_by(|a, b| b.date.cmp(&a.date));
         let index = Self {
             table_of_content,
             paragraph_under_certain_topic,

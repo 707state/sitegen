@@ -1,10 +1,7 @@
-use anyhow::{Context, Result};
-use std::{
-    env, fs,
-    path::{Path, PathBuf},
-};
+use anyhow::Result;
+use std::{env, path::PathBuf};
 
-use crate::markdown_meta::{Index, is_markdown};
+use crate::markdown_meta::Index;
 
 mod markdown_meta;
 
