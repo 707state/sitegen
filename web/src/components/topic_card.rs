@@ -38,28 +38,28 @@ pub fn topic_card(
         {
             if *is_open{
                 html! {
-                                        <ul class="list">
-                                            { for titles.iter().map(|title| {
-                                                let path = title_to_path.get(title).cloned();
-                                                if let Some(path) = path {
-                                                    let on_open = {
-                                                        let path = path.clone();
-                                                        let cb = on_open_post.clone();
-                                                        Callback::from(move |_| cb.emit(path.clone()))
-                                                    };
-                                                    html! {
-                                                        <li>
-                                                            <button onclick={on_open} class="link-button">
-                                                                { title }
-                                                            </button>
-                                                        </li>
-                                                    }
-                                                } else {
-                                                    html! { <li><span>{ title }</span></li> }
-                                                }
-                                            })}
-                                        </ul>
-                                    }
+                    <ul class="list">
+                        { for titles.iter().map(|title| {
+                            let path = title_to_path.get(title).cloned();
+                            if let Some(path) = path {
+                                let on_open = {
+                                    let path = path.clone();
+                                    let cb = on_open_post.clone();
+                                    Callback::from(move |_| cb.emit(path.clone()))
+                                };
+                                html! {
+                                    <li>
+                                        <button onclick={on_open} class="link-button">
+                                            { title }
+                                        </button>
+                                    </li>
+                                }
+                            } else {
+                                html! { <li><span>{ title }</span></li> }
+                            }
+                        })}
+                    </ul>
+                }
             }else{
                 html!{}
             }
