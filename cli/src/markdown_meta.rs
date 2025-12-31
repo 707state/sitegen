@@ -164,7 +164,7 @@ impl TryFrom<Vec<PathBuf>> for Index {
                 });
                 markdowns.push(built_md.markdown);
             }
-            for entry in walkdir::WalkDir::new(&path).follow_links(false) {
+            for entry in walkdir::WalkDir::new(&path).follow_links(true) {
                 let entry = match entry {
                     Ok(e) => e,
                     Err(e) => {
