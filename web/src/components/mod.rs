@@ -5,6 +5,7 @@ pub mod home_view;
 pub mod loading_view;
 pub mod page;
 pub mod post_view;
+pub mod search_view;
 pub mod topic_card;
 use chrono::NaiveDate;
 use serde::Deserialize;

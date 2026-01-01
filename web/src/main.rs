@@ -1,11 +1,12 @@
 use crate::components::{
     PostPayload, TocItem, error_view::ErrorView, home_view::HomeView, loading_view::LoadingView,
-    post_view::PostView,
+    post_view::PostView, search_view::SearchView,
 };
 use gloo_net::http::Request;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use yew::prelude::*;
+use yew_router::prelude::*;
 
 pub mod components;
 
@@ -14,6 +15,20 @@ pub struct IndexPayload {
     pub paragraph_under_certain_topic: HashMap<String, Vec<String>>,
     pub table_of_content: Vec<TocItem>,
 }
+
+#[derive(Clone, Routable, PartialEq)]
+enum Route {
+    #[at("/")]
+    Home,
+    #[at("/search")]
+    SearchHome,
+    #[at("/search/:keyword")]
+    Search { keyword: String },
+    #[not_found]
+    #[at("/404")]
+    NotFound,
+}
+
 #[function_component(App)]
 fn app() -> Html {
     let index = use_state(|| None::<IndexPayload>);
@@ -21,6 +36,8 @@ fn app() -> Html {
     let error = use_state(|| None::<String>);
     let is_loading = use_state(|| false);
     let expanded_topics = use_state(HashSet::<String>::new);
+    let route = use_route::<Route>();
+    let navigator = use_navigator();
 
     {
         let index = index.clone();
@@ -30,7 +47,7 @@ fn app() -> Html {
         use_effect_with((), move |_| {
             wasm_bindgen_futures::spawn_local(async move {
                 is_loading.set(true);
-                let res = Request::get("index.json").send().await;
+                let res = Request::get("/index.json").send().await;
 
                 match res {
                     Ok(resp) => match resp.json::<IndexPayload>().await {
@@ -78,7 +95,8 @@ fn app() -> Html {
                 is_loading.set(true);
                 error.set(None);
 
-                let res = Request::get(&path).send().await;
+                let req_path = format!("/{}", path.trim_start_matches('/'));
+                let res = Request::get(&req_path).send().await;
                 match res {
                     Ok(resp) => match resp.json::<PostPayload>().await {
                         Ok(p) => post.set(Some(p)),
@@ -91,6 +109,25 @@ fn app() -> Html {
             });
         })
     };
+    let on_search = {
+        let navigator = navigator.clone();
+        Callback::from(move |keyword: String| {
+            if let Some(navigator) = navigator.clone() {
+                let trimmed = keyword.trim().to_string();
+                if trimmed.is_empty() {
+                    navigator.push(&Route::SearchHome);
+                } else {
+                    navigator.push(&Route::Search { keyword: trimmed });
+                }
+            }
+        })
+    };
+    if matches!(route.as_ref(), Some(Route::NotFound)) {
+        return html! {
+            <ErrorView message={"Page not found".to_string()} on_home={on_home.clone()} />
+        };
+    }
+
     if let Some(err) = (*error).clone() {
         return html! {
             <ErrorView message={err} on_home={on_home.clone()} />
@@ -127,18 +164,39 @@ fn app() -> Html {
     topics.sort_by(|a, b| a.0.cmp(&b.0));
     let toc_items = index_payload.table_of_content;
     let expanded = (*expanded_topics).clone();
+    let search_keyword = match route.as_ref() {
+        Some(Route::Search { keyword }) => Some(keyword.clone()),
+        _ => None,
+    };
     html! {
-        <HomeView
-            toc_items={toc_items}
-            topics={topics}
-            title_to_path={title_to_path}
-            expanded_topics={expanded}
-            on_toggle_topic={on_toggle_topic}
-            on_open_post={on_open_post}
-        />
+        <div class="home-layout">
+            <HomeView
+                toc_items={toc_items.clone()}
+                topics={topics}
+                title_to_path={title_to_path}
+                expanded_topics={expanded}
+                on_toggle_topic={on_toggle_topic}
+                on_open_post={on_open_post.clone()}
+            />
+            <SearchView
+                toc_items={toc_items}
+                keyword={search_keyword}
+                on_search={on_search}
+                on_open_post={on_open_post}
+            />
+        </div>
     }
 }
 
 fn main() {
-    yew::Renderer::<App>::new().render();
+    yew::Renderer::<Root>::new().render();
+}
+
+#[function_component(Root)]
+fn root() -> Html {
+    html! {
+        <BrowserRouter>
+            <App />
+        </BrowserRouter>
+    }
 }
