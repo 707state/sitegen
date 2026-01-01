@@ -6,7 +6,6 @@ use gloo_net::http::Request;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use yew::prelude::*;
-use yew_router::prelude::*;
 
 pub mod components;
 
@@ -16,19 +15,6 @@ pub struct IndexPayload {
     pub table_of_content: Vec<TocItem>,
 }
 
-#[derive(Clone, Routable, PartialEq)]
-enum Route {
-    #[at("/")]
-    Home,
-    #[at("/search")]
-    SearchHome,
-    #[at("/search/:keyword")]
-    Search { keyword: String },
-    #[not_found]
-    #[at("/404")]
-    NotFound,
-}
-
 #[function_component(App)]
 fn app() -> Html {
     let index = use_state(|| None::<IndexPayload>);
@@ -36,8 +22,7 @@ fn app() -> Html {
     let error = use_state(|| None::<String>);
     let is_loading = use_state(|| false);
     let expanded_topics = use_state(HashSet::<String>::new);
-    let route = use_route::<Route>();
-    let navigator = use_navigator();
+    let search_keyword = use_state(String::new);
 
     {
         let index = index.clone();
@@ -47,7 +32,7 @@ fn app() -> Html {
         use_effect_with((), move |_| {
             wasm_bindgen_futures::spawn_local(async move {
                 is_loading.set(true);
-                let res = Request::get("/index.json").send().await;
+                let res = Request::get(&content_url("/index.json")).send().await;
 
                 match res {
                     Ok(resp) => match resp.json::<IndexPayload>().await {
@@ -96,7 +81,7 @@ fn app() -> Html {
                 error.set(None);
 
                 let req_path = format!("/{}", path.trim_start_matches('/'));
-                let res = Request::get(&req_path).send().await;
+                let res = Request::get(&content_url(&req_path)).send().await;
                 match res {
                     Ok(resp) => match resp.json::<PostPayload>().await {
                         Ok(p) => post.set(Some(p)),
@@ -110,23 +95,11 @@ fn app() -> Html {
         })
     };
     let on_search = {
-        let navigator = navigator.clone();
+        let search_keyword = search_keyword.clone();
         Callback::from(move |keyword: String| {
-            if let Some(navigator) = navigator.clone() {
-                let trimmed = keyword.trim().to_string();
-                if trimmed.is_empty() {
-                    navigator.push(&Route::SearchHome);
-                } else {
-                    navigator.push(&Route::Search { keyword: trimmed });
-                }
-            }
+            search_keyword.set(keyword.trim().to_string());
         })
     };
-    if matches!(route.as_ref(), Some(Route::NotFound)) {
-        return html! {
-            <ErrorView message={"Page not found".to_string()} on_home={on_home.clone()} />
-        };
-    }
 
     if let Some(err) = (*error).clone() {
         return html! {
@@ -164,9 +137,10 @@ fn app() -> Html {
     topics.sort_by(|a, b| a.0.cmp(&b.0));
     let toc_items = index_payload.table_of_content;
     let expanded = (*expanded_topics).clone();
-    let search_keyword = match route.as_ref() {
-        Some(Route::Search { keyword }) => Some(keyword.clone()),
-        _ => None,
+    let search_keyword = if (*search_keyword).trim().is_empty() {
+        None
+    } else {
+        Some((*search_keyword).clone())
     };
     html! {
         <div class="home-layout">
@@ -189,14 +163,16 @@ fn app() -> Html {
 }
 
 fn main() {
-    yew::Renderer::<Root>::new().render();
+    yew::Renderer::<App>::new().render();
 }
 
-#[function_component(Root)]
-fn root() -> Html {
-    html! {
-        <BrowserRouter>
-            <App />
-        </BrowserRouter>
+fn content_url(path: &str) -> String {
+    let base = option_env!("CONTENT_BASE_URL").unwrap_or("");
+    let base = base.trim_end_matches('/');
+    let path = path.trim_start_matches('/');
+    if base.is_empty() {
+        format!("/{}", path)
+    } else {
+        format!("{}/{}", base, path)
     }
 }
