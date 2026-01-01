@@ -3,3 +3,4 @@ Cargo.lock
 web/dist
 dist/
 web/content
+web/images

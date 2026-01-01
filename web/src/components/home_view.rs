@@ -54,7 +54,7 @@ pub fn home_view(
                     </p>
                 </div>
 
-                <div style="display:flex; gap:8px; align-items:center;">
+                <div class="home-mode-toggle">
                     <button
                         class="home-button"
                         onclick={set_archive}

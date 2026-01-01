@@ -36,9 +36,9 @@ pub fn archive_view(
         <>
         {
             for groups.into_iter().map(|((year,month),items)|{
-                let year_header = if last_year != Some(year) {
+                    let year_header = if last_year != Some(year) {
                         last_year = Some(year);
-                        html! { <h2 style="margin: 10px 0 0; color: var(--sky-900);">{ format!("{year}") }</h2> }
+                        html! { <h2 class="archive-year">{ format!("{year}") }</h2> }
                     } else {
                         html! {}
                     };
@@ -47,11 +47,11 @@ pub fn archive_view(
                         <>
                         {year_header}
                         <Card>
-                        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
-                            <div style="font-weight:800; color: var(--sky-900); font-size: 18px;">
+                        <div class="archive-month-row">
+                            <div class="archive-month-title">
                                 { month_title }
                             </div>
-                            <div style="color: var(--sky-700); font-size: 12px;">
+                            <div class="archive-month-count">
                                 { format!("{} 篇", items.len()) }
                             </div>
                         </div>
@@ -66,7 +66,7 @@ pub fn archive_view(
                                     html!{
                                         <li>
                                             <button onclick={on_open} class="link-button">
-                                                <span style="opacity: 0.75; font-size: 12px;">
+                                                <span class="archive-date">
                                                     { it.date.format("%m-%d").to_string() }
                                                 </span>
                                                 <span>{ it.title }</span>

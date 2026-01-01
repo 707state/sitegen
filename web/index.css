@@ -41,6 +41,12 @@ body {
     gap: 12px;
 }
 
+.home-mode-toggle {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
 .title {
     font-size: 32px;
     margin: 0;
@@ -119,6 +125,34 @@ body {
     border-color: var(--border);
     box-shadow: 0 8px 16px rgba(20, 90, 130, 0.1);
     transform: translateY(-1px);
+}
+
+.archive-year {
+    margin: 10px 0 0;
+    color: var(--sky-900);
+}
+
+.archive-month-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.archive-month-title {
+    font-weight: 800;
+    color: var(--sky-900);
+    font-size: 18px;
+}
+
+.archive-month-count {
+    color: var(--sky-700);
+    font-size: 12px;
+}
+
+.archive-date {
+    opacity: 0.75;
+    font-size: 12px;
 }
 
 .home-button {
