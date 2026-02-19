@@ -12,19 +12,9 @@ pub struct WebglCubeProps {
 #[function_component(WebglCube)]
 pub fn webgl_cube(WebglCubeProps { collapsed }: &WebglCubeProps) -> Html {
     let canvas_ref = use_node_ref();
-    let collapsed_flag = use_mut_ref(|| *collapsed);
-
-    {
-        let collapsed_flag = collapsed_flag.clone();
-        use_effect_with(*collapsed, move |is_collapsed| {
-            *collapsed_flag.borrow_mut() = *is_collapsed;
-            || ()
-        });
-    }
 
     {
         let canvas_ref = canvas_ref.clone();
-        let collapsed_flag = collapsed_flag.clone();
         use_effect_with((), move |_| {
             let mut tick: Option<Interval> = None;
 
@@ -76,10 +66,6 @@ pub fn webgl_cube(WebglCubeProps { collapsed }: &WebglCubeProps) -> Html {
                     {
                         let start = Date::now();
                         tick = Some(Interval::new(16, move || {
-                            if *collapsed_flag.borrow() {
-                                return;
-                            }
-
                             let t = ((Date::now() - start) / 1000.0) as f32;
                             let w = canvas.width() as i32;
                             let h = canvas.height() as i32;
