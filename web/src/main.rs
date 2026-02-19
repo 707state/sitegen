@@ -1,6 +1,6 @@
 use crate::components::{
     PostPayload, TocItem, error_view::ErrorView, home_view::HomeView, loading_view::LoadingView,
-    post_view::PostView, search_view::SearchView,
+    post_view::PostView, search_view::SearchView, webgl_cube::WebglCube,
 };
 use gloo_net::http::Request;
 use serde::Deserialize;
@@ -23,6 +23,7 @@ fn app() -> Html {
     let is_loading = use_state(|| false);
     let expanded_topics = use_state(HashSet::<String>::new);
     let search_keyword = use_state(String::new);
+    let is_search_open = use_state(|| true);
 
     {
         let index = index.clone();
@@ -100,6 +101,10 @@ fn app() -> Html {
             search_keyword.set(keyword.trim().to_string());
         })
     };
+    let on_toggle_search_panel = {
+        let is_search_open = is_search_open.clone();
+        Callback::from(move |_| is_search_open.set(!*is_search_open))
+    };
 
     if let Some(err) = (*error).clone() {
         return html! {
@@ -143,22 +148,27 @@ fn app() -> Html {
         Some((*search_keyword).clone())
     };
     html! {
-        <div class="home-layout">
-            <HomeView
-                toc_items={toc_items.clone()}
-                topics={topics}
-                title_to_path={title_to_path}
-                expanded_topics={expanded}
-                on_toggle_topic={on_toggle_topic}
-                on_open_post={on_open_post.clone()}
-            />
-            <SearchView
-                toc_items={toc_items}
-                keyword={search_keyword}
-                on_search={on_search}
-                on_open_post={on_open_post}
-            />
-        </div>
+        <>
+            <div class="home-layout">
+                <HomeView
+                    toc_items={toc_items.clone()}
+                    topics={topics}
+                    title_to_path={title_to_path}
+                    expanded_topics={expanded}
+                    on_toggle_topic={on_toggle_topic}
+                    on_open_post={on_open_post.clone()}
+                />
+                <SearchView
+                    toc_items={toc_items}
+                    keyword={search_keyword}
+                    is_open={*is_search_open}
+                    on_toggle_panel={on_toggle_search_panel}
+                    on_search={on_search}
+                    on_open_post={on_open_post}
+                />
+            </div>
+            <WebglCube collapsed={!*is_search_open} />
+        </>
     }
 }
 

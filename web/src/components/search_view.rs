@@ -6,6 +6,8 @@ use yew::prelude::*;
 pub struct SearchViewProps {
     pub toc_items: Vec<TocItem>,
     pub keyword: Option<String>,
+    pub is_open: bool,
+    pub on_toggle_panel: Callback<()>,
     pub on_search: Callback<String>,
     pub on_open_post: Callback<String>,
 }
@@ -15,11 +17,12 @@ pub fn search_view(
     SearchViewProps {
         toc_items,
         keyword,
+        is_open,
+        on_toggle_panel,
         on_search,
         on_open_post,
     }: &SearchViewProps,
 ) -> Html {
-    let is_open = use_state(|| true);
     let current_keyword = keyword.clone().unwrap_or_default();
     let input_value = use_state(|| current_keyword.clone());
 
@@ -48,8 +51,8 @@ pub fn search_view(
         })
     };
     let on_toggle = {
-        let is_open = is_open.clone();
-        Callback::from(move |_| is_open.set(!*is_open))
+        let on_toggle_panel = on_toggle_panel.clone();
+        Callback::from(move |_| on_toggle_panel.emit(()))
     };
 
     let normalized = current_keyword.trim().to_lowercase();

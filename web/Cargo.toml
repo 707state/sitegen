@@ -5,8 +5,11 @@ edition = "2024"
 
 [dependencies]
 chrono = { version = "0.4.42", features = ["serde"] }
+gloo = "0.11.0"
 gloo-net = "0.6.0"
+js-sys = "0.3.83"
 serde = { version = "1.0.228", features = ["derive"] }
+wasm-bindgen = "0.2.108"
 wasm-bindgen-futures = "0.4.56"
 web-sys = {version = "0.3.83",features=["HtmlCanvasElement","WebGlBuffer","WebGlProgram","WebGlRenderingContext","WebGlShader","WebGlUniformLocation","CanvasRenderingContext2d","HtmlLinkElement"]}
 yew = { version = "0.22.0", features = ["csr", "serde"] }
