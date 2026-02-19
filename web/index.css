@@ -270,6 +270,7 @@ body {
 .search-toggle-collapsed {
     writing-mode: vertical-rl;
     letter-spacing: 1px;
+    margin-left: -6px;
 }
 
 .search-results {
@@ -387,11 +388,16 @@ body {
 @media (max-width: 720px) {
     .home-layout {
         grid-template-columns: 1fr;
+        padding-bottom: 188px;
     }
 
     .search-panel {
-        padding-top: 0;
-        width: auto;
+        position: fixed;
+        left: 12px;
+        bottom: 12px;
+        width: calc(50vw - 18px);
+        padding: 0;
+        z-index: 24;
     }
 
     .page {
@@ -405,12 +411,67 @@ body {
     .cube-dock {
         right: 12px;
         bottom: 12px;
-        width: 160px;
-        height: 160px;
+        width: calc(50vw - 18px);
+        height: 176px;
+        border-radius: 14px;
     }
 
     .cube-dock.is-collapsed {
-        width: 56px;
-        height: 56px;
+        width: calc(50vw - 18px);
+        height: 176px;
+        transform: none;
+        opacity: 0.9;
+    }
+
+    .search-panel.is-collapsed {
+        width: calc(50vw - 18px);
+        padding: 0;
+    }
+
+    .search-panel .search-card {
+        height: 176px;
+        padding: 12px;
+        gap: 10px;
+        border-radius: 14px;
+        background: radial-gradient(
+            70% 70% at 30% 20%,
+            rgba(255, 255, 255, 0.8) 0%,
+            rgba(231, 246, 255, 0.35) 100%
+        );
+        border: 1px solid rgba(207, 233, 248, 0.85);
+        box-shadow:
+            0 16px 34px rgba(20, 90, 130, 0.16),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+        backdrop-filter: blur(4px);
+    }
+
+    .search-panel .search-card-collapsed {
+        height: 176px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .search-toggle-collapsed {
+        writing-mode: horizontal-tb;
+        letter-spacing: 0.4px;
+    }
+
+    .search-header-row {
+        align-items: center;
+    }
+
+    .search-title {
+        font-size: 18px;
+    }
+
+    .search-subtitle {
+        display: none;
+    }
+
+    .search-results {
+        min-height: 0;
+        overflow: auto;
     }
 }
