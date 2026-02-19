@@ -31,4 +31,6 @@ pub struct TocItem {
     pub title: String,
     pub path: String,
     pub date: NaiveDate,
+    #[serde(default)]
+    pub route: String,
 }
