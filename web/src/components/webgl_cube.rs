@@ -1,7 +1,9 @@
 use gloo::timers::callback::Interval;
 use js_sys::Date;
+use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlCanvasElement, WebGlProgram, WebGlRenderingContext, WebGlShader};
+use wasm_bindgen::closure::Closure;
+use web_sys::{HtmlCanvasElement, MouseEvent, WebGlProgram, WebGlRenderingContext, WebGlShader};
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
@@ -9,14 +11,34 @@ pub struct WebglCubeProps {
     pub collapsed: bool,
 }
 
+#[derive(Default)]
+struct MotionState {
+    rot_x: f32,
+    rot_y: f32,
+    vel_x: f32,
+    vel_y: f32,
+}
+
 #[function_component(WebglCube)]
 pub fn webgl_cube(WebglCubeProps { collapsed }: &WebglCubeProps) -> Html {
     let canvas_ref = use_node_ref();
+    let collapsed_flag = use_mut_ref(|| *collapsed);
+
+    {
+        let collapsed_flag = collapsed_flag.clone();
+        use_effect_with(*collapsed, move |is_collapsed| {
+            *collapsed_flag.borrow_mut() = *is_collapsed;
+            || ()
+        });
+    }
 
     {
         let canvas_ref = canvas_ref.clone();
+        let collapsed_flag = collapsed_flag.clone();
         use_effect_with((), move |_| {
             let mut tick: Option<Interval> = None;
+            let mut on_mouse_move: Option<Closure<dyn FnMut(MouseEvent)>> = None;
+            let mut on_mouse_leave: Option<Closure<dyn FnMut(MouseEvent)>> = None;
 
             if let Some(canvas) = canvas_ref.cast::<HtmlCanvasElement>()
                 && let Ok(Some(ctx)) = canvas.get_context("webgl")
@@ -25,7 +47,10 @@ pub fn webgl_cube(WebglCubeProps { collapsed }: &WebglCubeProps) -> Html {
                 && let Some(buffer) = gl.create_buffer()
             {
                 gl.use_program(Some(&program));
-                let vertices = cube_vertices();
+                let mut vertices = cube_vertices();
+                let cube_vertex_count = (vertices.len() / 6) as i32;
+                vertices.extend_from_slice(&axes_vertices());
+                let axis_vertex_count = ((vertices.len() / 6) as i32) - cube_vertex_count;
                 gl.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&buffer));
                 let vert_array = js_sys::Float32Array::from(vertices.as_slice());
                 gl.buffer_data_with_array_buffer_view(
@@ -64,9 +89,62 @@ pub fn webgl_cube(WebglCubeProps { collapsed }: &WebglCubeProps) -> Html {
                     if let Some(u_matrix) = gl.get_uniform_location(&program, "u_matrix")
                         && let Some(u_time) = gl.get_uniform_location(&program, "u_time")
                     {
+                        let motion = Rc::new(RefCell::new(MotionState {
+                            vel_x: 0.7,
+                            vel_y: 1.0,
+                            ..MotionState::default()
+                        }));
+                        let motion_for_mouse = motion.clone();
+                        let canvas_for_mouse = canvas.clone();
+                        let collapsed_for_mouse = collapsed_flag.clone();
+
+                        on_mouse_move = Some(Closure::wrap(Box::new(move |event: MouseEvent| {
+                            if *collapsed_for_mouse.borrow() {
+                                return;
+                            }
+
+                            let rect = canvas_for_mouse.get_bounding_client_rect();
+                            let cx = rect.left() + rect.width() * 0.5;
+                            let cy = rect.top() + rect.height() * 0.5;
+                            let half_w = (rect.width() * 0.5).max(1.0);
+                            let half_h = (rect.height() * 0.5).max(1.0);
+                            let nx = ((event.client_x() as f64 - cx) / half_w).clamp(-1.0, 1.0);
+                            let ny = ((event.client_y() as f64 - cy) / half_h).clamp(-1.0, 1.0);
+
+                            let mut state = motion_for_mouse.borrow_mut();
+                            state.vel_y = (nx as f32) * 2.4;
+                            state.vel_x = (-(ny as f32)) * 2.4;
+                        })
+                            as Box<dyn FnMut(_)>));
+                        if let Some(handler) = on_mouse_move.as_ref() {
+                            let _ = canvas.add_event_listener_with_callback(
+                                "mousemove",
+                                handler.as_ref().unchecked_ref(),
+                            );
+                        }
+
+                        let motion_for_leave = motion.clone();
+                        on_mouse_leave = Some(Closure::wrap(Box::new(move |_event: MouseEvent| {
+                            let mut state = motion_for_leave.borrow_mut();
+                            state.vel_x = 0.7;
+                            state.vel_y = 1.0;
+                        })
+                            as Box<dyn FnMut(_)>));
+                        if let Some(handler) = on_mouse_leave.as_ref() {
+                            let _ = canvas.add_event_listener_with_callback(
+                                "mouseleave",
+                                handler.as_ref().unchecked_ref(),
+                            );
+                        }
+
                         let start = Date::now();
+                        let mut last = start;
                         tick = Some(Interval::new(16, move || {
-                            let t = ((Date::now() - start) / 1000.0) as f32;
+                            let now = Date::now();
+                            let dt = ((now - last) / 1000.0) as f32;
+                            last = now;
+
+                            let t = ((now - start) / 1000.0) as f32;
                             let w = canvas.width() as i32;
                             let h = canvas.height() as i32;
                             gl.viewport(0, 0, w, h);
@@ -75,23 +153,51 @@ pub fn webgl_cube(WebglCubeProps { collapsed }: &WebglCubeProps) -> Html {
                                     | WebGlRenderingContext::DEPTH_BUFFER_BIT,
                             );
 
+                            let mut state = motion.borrow_mut();
+                            state.rot_x += state.vel_x * dt;
+                            state.rot_y += state.vel_y * dt;
+
                             let aspect = if h > 0 { w as f32 / h as f32 } else { 1.0 };
                             let proj = perspective(50.0_f32.to_radians(), aspect, 0.1, 100.0);
-                            let rot_x = rotation_x(t * 0.7);
-                            let rot_y = rotation_y(t * 1.0);
+                            let rot_x = rotation_x(state.rot_x);
+                            let rot_y = rotation_y(state.rot_y);
                             let model =
                                 multiply(translation(0.0, 0.0, -4.0), multiply(rot_y, rot_x));
                             let mvp = multiply(proj, model);
 
                             gl.uniform_matrix4fv_with_f32_array(Some(&u_matrix), false, &mvp);
                             gl.uniform1f(Some(&u_time), t);
-                            gl.draw_arrays(WebGlRenderingContext::TRIANGLES, 0, 36);
+                            gl.draw_arrays(WebGlRenderingContext::TRIANGLES, 0, cube_vertex_count);
+                            gl.uniform1f(Some(&u_time), 0.0);
+                            gl.draw_arrays(
+                                WebGlRenderingContext::LINES,
+                                cube_vertex_count,
+                                axis_vertex_count,
+                            );
                         }));
                     }
                 }
             }
 
-            move || drop(tick)
+            move || {
+                if let Some(canvas) = canvas_ref.cast::<HtmlCanvasElement>() {
+                    if let Some(handler) = on_mouse_move.as_ref() {
+                        let _ = canvas.remove_event_listener_with_callback(
+                            "mousemove",
+                            handler.as_ref().unchecked_ref(),
+                        );
+                    }
+                    if let Some(handler) = on_mouse_leave.as_ref() {
+                        let _ = canvas.remove_event_listener_with_callback(
+                            "mouseleave",
+                            handler.as_ref().unchecked_ref(),
+                        );
+                    }
+                }
+                drop(tick);
+                drop(on_mouse_move);
+                drop(on_mouse_leave);
+            }
         });
     }
 
@@ -193,6 +299,16 @@ fn cube_vertices() -> Vec<f32> {
         -1.0, -1.0, -1.0, 0.1, 0.9, 0.6, 1.0, -1.0, -1.0, 0.1, 0.9, 0.6, 1.0, -1.0, 1.0, 0.1, 0.9,
         0.6, -1.0, -1.0, -1.0, 0.1, 0.9, 0.6, 1.0, -1.0, 1.0, 0.1, 0.9, 0.6, -1.0, -1.0, 1.0, 0.1,
         0.9, 0.6,
+    ]
+}
+
+fn axes_vertices() -> Vec<f32> {
+    let l = 1.7;
+    vec![
+        // X axis (red)
+        -l, 0.0, 0.0, 1.0, 0.0, 0.0, l, 0.0, 0.0, 1.0, 0.0, 0.0, // Y axis (green)
+        0.0, -l, 0.0, 0.0, 1.0, 0.0, 0.0, l, 0.0, 0.0, 1.0, 0.0, // Z axis (blue)
+        0.0, 0.0, -l, 0.0, 0.0, 1.0, 0.0, 0.0, l, 0.0, 0.0, 1.0,
     ]
 }
 
