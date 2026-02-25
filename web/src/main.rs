@@ -41,7 +41,7 @@ fn app_shell() -> Html {
     let is_loading = use_state(|| false);
     let expanded_topics = use_state(HashSet::<String>::new);
     let search_keyword = use_state(String::new);
-    let is_search_open = use_state(|| true);
+    let is_search_open = use_state(|| false);
     let is_about_open = use_state(|| false);
     let navigator = use_navigator();
     let route = use_route::<Route>().unwrap_or(Route::Home);
@@ -188,9 +188,15 @@ fn app_shell() -> Html {
             } else {
                 Some((*search_keyword).clone())
             };
+            let both_collapsed = !*is_search_open && !*is_about_open;
+            let content_style = if both_collapsed {
+                "--content-right-pad: 140px;"
+            } else {
+                "--content-right-pad: 340px;"
+            };
             html! {
                 <>
-                    <div class="home-layout">
+                    <div class="home-layout" style={content_style}>
                         <HomeView
                             toc_items={toc_items.clone()}
                             topics={topics}
@@ -203,6 +209,7 @@ fn app_shell() -> Html {
                             toc_items={toc_items}
                             keyword={search_keyword}
                             is_open={*is_search_open}
+                            about_is_open={*is_about_open}
                             on_toggle_panel={on_toggle_search_panel}
                             on_search={on_search}
                             on_open_post={on_open_post}

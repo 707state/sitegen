@@ -7,6 +7,7 @@ pub struct SearchViewProps {
     pub toc_items: Vec<TocItem>,
     pub keyword: Option<String>,
     pub is_open: bool,
+    pub about_is_open: bool,
     pub on_toggle_panel: Callback<()>,
     pub on_search: Callback<String>,
     pub on_open_post: Callback<String>,
@@ -18,6 +19,7 @@ pub fn search_view(
         toc_items,
         keyword,
         is_open,
+        about_is_open,
         on_toggle_panel,
         on_search,
         on_open_post,
@@ -71,8 +73,14 @@ pub fn search_view(
         classes!("search-panel", "is-collapsed")
     };
 
+    let panel_style = if *about_is_open {
+        "--panel-top: 318px;"
+    } else {
+        "--panel-top: 124px;"
+    };
+
     html! {
-        <aside class={panel_class}>
+        <aside class={panel_class} style={panel_style}>
             {
                 if *is_open {
                     html! {
