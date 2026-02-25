@@ -1,6 +1,6 @@
 use crate::components::{
-    PostPayload, TocItem, error_view::ErrorView, home_view::HomeView, loading_view::LoadingView,
-    post_view::PostView, search_view::SearchView, webgl_cube::WebglCube,
+    PostPayload, TocItem, about_me_view::AboutMeView, error_view::ErrorView, home_view::HomeView,
+    loading_view::LoadingView, post_view::PostView, search_view::SearchView, webgl_cube::WebglCube,
 };
 use gloo_net::http::Request;
 use serde::Deserialize;
@@ -42,6 +42,7 @@ fn app_shell() -> Html {
     let expanded_topics = use_state(HashSet::<String>::new);
     let search_keyword = use_state(String::new);
     let is_search_open = use_state(|| true);
+    let is_about_open = use_state(|| false);
     let navigator = use_navigator();
     let route = use_route::<Route>().unwrap_or(Route::Home);
     let route_path = match &route {
@@ -147,6 +148,10 @@ fn app_shell() -> Html {
         let is_search_open = is_search_open.clone();
         Callback::from(move |_| is_search_open.set(!*is_search_open))
     };
+    let on_toggle_about_panel = {
+        let is_about_open = is_about_open.clone();
+        Callback::from(move |_| is_about_open.set(!*is_about_open))
+    };
 
     if let Some(err) = (*error).clone() {
         return html! {
@@ -203,6 +208,15 @@ fn app_shell() -> Html {
                             on_open_post={on_open_post}
                         />
                     </div>
+                    <AboutMeView
+                        nickname={"707state"}
+                        avatar_url={"https://avatars.githubusercontent.com/u/115874695?v=4&size=64"}
+                        bio={"Got me breathing with dragons"}
+                        github_url={"https://github.com/707state"}
+                        wechat_id={"visi0nist"}
+                        is_open={*is_about_open}
+                        on_toggle_panel={on_toggle_about_panel}
+                    />
                     <WebglCube collapsed={!*is_search_open} />
                 </>
             }

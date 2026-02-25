@@ -317,6 +317,122 @@ body {
     box-shadow: 0 10px 20px rgba(58, 162, 227, 0.3);
 }
 
+.about-panel {
+    position: fixed;
+    left: 24px;
+    bottom: 20px;
+    width: 280px;
+    z-index: 23;
+    transition:
+        width 220ms ease,
+        transform 220ms ease,
+        opacity 220ms ease;
+}
+
+.about-panel.is-collapsed {
+    width: 86px;
+}
+
+.about-card {
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow:
+        0 10px 24px rgba(20, 90, 130, 0.1),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(14px) saturate(125%);
+    -webkit-backdrop-filter: blur(14px) saturate(125%);
+}
+
+.about-card-collapsed {
+    padding: 8px;
+    place-items: center;
+}
+
+.about-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.about-title {
+    margin: 0;
+    font-size: 18px;
+    color: var(--sky-900);
+}
+
+.about-toggle {
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--sky-700);
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.about-toggle-collapsed {
+    writing-mode: vertical-rl;
+    letter-spacing: 1px;
+}
+
+.about-profile {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+}
+
+.about-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+}
+
+.about-profile-text {
+    display: grid;
+    gap: 4px;
+}
+
+.about-nickname {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--sky-900);
+}
+
+.about-bio {
+    margin: 0;
+    font-size: 12px;
+    color: var(--sky-700);
+    line-height: 1.4;
+}
+
+.about-list {
+    margin-top: 0;
+    gap: 6px;
+}
+
+.about-link {
+    color: var(--sky-700);
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.about-link:hover {
+    text-decoration: underline;
+}
+
+.about-wechat {
+    color: var(--sky-700);
+    font-size: 12px;
+}
+
 .cube-dock {
     position: fixed;
     right: 24px;
@@ -447,6 +563,42 @@ body {
         height: var(--mobile-panel-collapsed);
         transform: scale(1);
         opacity: 0.45;
+    }
+
+    .about-panel {
+        left: var(--mobile-gap);
+        bottom: calc(
+            var(--mobile-panel-open-h) + var(--mobile-bottom-gap) +
+                var(--mobile-gap)
+        );
+        width: var(--mobile-panel-open-w);
+    }
+
+    .about-panel.is-collapsed {
+        width: var(--mobile-panel-collapsed);
+        opacity: 0.9;
+    }
+
+    .about-card {
+        border-radius: 14px;
+    }
+
+    .about-toggle-collapsed {
+        writing-mode: horizontal-tb;
+        letter-spacing: 0.2px;
+    }
+
+    .about-title {
+        font-size: 16px;
+    }
+
+    .about-profile {
+        grid-template-columns: 44px minmax(0, 1fr);
+    }
+
+    .about-avatar {
+        width: 44px;
+        height: 44px;
     }
 
     .search-panel.is-collapsed {

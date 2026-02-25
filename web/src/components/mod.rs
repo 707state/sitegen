@@ -1,3 +1,4 @@
+pub mod about_me_view;
 pub mod archive_view;
 pub mod card;
 pub mod error_view;
