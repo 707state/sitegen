@@ -215,28 +215,8 @@ pub fn webgl_cube(WebglCubeProps { collapsed }: &WebglCubeProps) -> Html {
 }
 
 fn setup_program(gl: &WebGlRenderingContext) -> Option<WebGlProgram> {
-    let vert_src = r#"
-attribute vec3 a_position;
-attribute vec3 a_color;
-uniform mat4 u_matrix;
-varying vec3 v_color;
-
-void main() {
-    v_color = a_color;
-    gl_Position = u_matrix * vec4(a_position, 1.0);
-}
-"#;
-    let frag_src = r#"
-precision mediump float;
-varying vec3 v_color;
-uniform float u_time;
-
-void main() {
-    vec3 pulse = vec3(0.7, 1.1, 1.6) * u_time;
-    vec3 rgb = abs(sin(v_color + pulse));
-    gl_FragColor = vec4(rgb, 1.0);
-}
-"#;
+    let vert_src = include_str!("shaders/cube.vert");
+    let frag_src = include_str!("shaders/cube.frag");
 
     let vert = compile_shader(gl, WebGlRenderingContext::VERTEX_SHADER, vert_src)?;
     let frag = compile_shader(gl, WebGlRenderingContext::FRAGMENT_SHADER, frag_src)?;
