@@ -72,6 +72,7 @@ impl TryFrom<PathBuf> for Markdown {
         // comrak options
         let mut options = Options::default();
         options.extension.front_matter_delimiter = Some("---".to_owned());
+        options.extension.table=true;
         let arena = Arena::new();
         let root = comrak::parse_document(&arena, &input, &options);
         let mut front_matter_string = extract_front_matter_from_ast(root)
