@@ -97,7 +97,11 @@ impl TryFrom<PathBuf> for Markdown {
             path,
             modified_at_unix,
             metadata,
-            content: comrak::markdown_to_html(&input, &options),
+            content: {
+                let html = comrak::markdown_to_html(&input, &options);
+                // Make all links open in a new tab
+                html.replace("<a href=", "<a target=\"_blank\" rel=\"noopener noreferrer\" href=")
+            },
         })
     }
 }
