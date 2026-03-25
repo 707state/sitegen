@@ -1,6 +1,10 @@
 use anyhow::{Context, Result};
 use chrono::NaiveDate;
-use comrak::{Arena, Options, nodes::NodeValue};
+use comrak::{
+    Arena, Options, format_html_with_plugins, nodes::NodeValue,
+    options::Plugins,
+    plugins::syntect::SyntectAdapter,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -98,7 +102,13 @@ impl TryFrom<PathBuf> for Markdown {
             modified_at_unix,
             metadata,
             content: {
-                let html = comrak::markdown_to_html(&input, &options);
+                let adapter = SyntectAdapter::new(Some("InspiredGitHub"));
+                let mut plugins = Plugins::default();
+                plugins.render.codefence_syntax_highlighter = Some(&adapter);
+                let mut html_output = String::new();
+                format_html_with_plugins(root, &options, &mut html_output, &plugins)
+                    .context("failed to render markdown to HTML")?;
+                let html = html_output;
                 // Make all links open in a new tab
                 html.replace("<a href=", "<a target=\"_blank\" rel=\"noopener noreferrer\" href=")
             },
