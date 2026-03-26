@@ -1,8 +1,7 @@
 use anyhow::{Context, Result};
 use chrono::NaiveDate;
 use comrak::{
-    Arena, Options, format_html_with_plugins, nodes::NodeValue,
-    options::Plugins,
+    Arena, Options, format_html_with_plugins, nodes::NodeValue, options::Plugins,
     plugins::syntect::SyntectAdapter,
 };
 use serde::{Deserialize, Serialize};
@@ -26,8 +25,16 @@ pub struct Markdown {
     path: PathBuf,
     modified_at_unix: Option<u64>,
     metadata: FrontMatter,
+    headings: Vec<PostHeading>,
     // content, think when dumping json, content should be a HTML string
     content: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PostHeading {
+    level: u8,
+    text: String,
+    id: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -76,7 +83,7 @@ impl TryFrom<PathBuf> for Markdown {
         // comrak options
         let mut options = Options::default();
         options.extension.front_matter_delimiter = Some("---".to_owned());
-        options.extension.table=true;
+        options.extension.table = true;
         let arena = Arena::new();
         let root = comrak::parse_document(&arena, &input, &options);
         let mut front_matter_string = extract_front_matter_from_ast(root)
@@ -97,10 +104,12 @@ impl TryFrom<PathBuf> for Markdown {
                     front_matter_string
                 )
             })?;
+        let headings = extract_headings(root);
         Ok(Self {
             path,
             modified_at_unix,
             metadata,
+            headings: headings.clone(),
             content: {
                 let adapter = SyntectAdapter::new(Some("InspiredGitHub"));
                 let mut plugins = Plugins::default();
@@ -108,9 +117,12 @@ impl TryFrom<PathBuf> for Markdown {
                 let mut html_output = String::new();
                 format_html_with_plugins(root, &options, &mut html_output, &plugins)
                     .context("failed to render markdown to HTML")?;
-                let html = html_output;
+                let html = inject_heading_ids(html_output, &headings);
                 // Make all links open in a new tab
-                html.replace("<a href=", "<a target=\"_blank\" rel=\"noopener noreferrer\" href=")
+                html.replace(
+                    "<a href=",
+                    "<a target=\"_blank\" rel=\"noopener noreferrer\" href=",
+                )
             },
         })
     }
@@ -240,4 +252,104 @@ fn extract_front_matter_from_ast<'a>(root: &'a comrak::nodes::AstNode<'a>) -> Op
 fn relative_json_path(path: &Path, dist_dir: &Path) -> String {
     let rel = path.strip_prefix(dist_dir).unwrap_or(path);
     rel.to_string_lossy().into_owned()
+}
+
+fn extract_headings<'a>(root: &'a comrak::nodes::AstNode<'a>) -> Vec<PostHeading> {
+    let mut headings = Vec::new();
+    let mut seen_ids = HashMap::<String, usize>::new();
+    collect_headings(root, &mut headings, &mut seen_ids);
+    headings
+}
+
+fn collect_headings<'a>(
+    node: &'a comrak::nodes::AstNode<'a>,
+    headings: &mut Vec<PostHeading>,
+    seen_ids: &mut HashMap<String, usize>,
+) {
+    {
+        let data = node.data.borrow();
+        if let NodeValue::Heading(ref heading) = data.value {
+            let text = collect_text(node).trim().to_string();
+            if !text.is_empty() {
+                let base_id = slugify(&text);
+                let seen = seen_ids.entry(base_id.clone()).or_insert(0);
+                let id = if *seen == 0 {
+                    base_id
+                } else {
+                    format!("{base_id}-{}", *seen + 1)
+                };
+                *seen += 1;
+                headings.push(PostHeading {
+                    level: heading.level,
+                    text,
+                    id,
+                });
+            }
+        }
+    }
+
+    for child in node.children() {
+        collect_headings(child, headings, seen_ids);
+    }
+}
+
+fn collect_text<'a>(node: &'a comrak::nodes::AstNode<'a>) -> String {
+    let data = node.data.borrow();
+    match &data.value {
+        NodeValue::Text(text) => text.to_string(),
+        NodeValue::Code(code) => code.literal.clone(),
+        NodeValue::LineBreak | NodeValue::SoftBreak => " ".to_string(),
+        _ => {
+            drop(data);
+            let mut text = String::new();
+            for child in node.children() {
+                text.push_str(&collect_text(child));
+            }
+            text
+        }
+    }
+}
+
+fn slugify(input: &str) -> String {
+    let mut slug = String::new();
+    let mut previous_was_dash = false;
+
+    for ch in input.chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch.to_ascii_lowercase());
+            previous_was_dash = false;
+        } else if ch.is_alphanumeric() {
+            slug.push(ch);
+            previous_was_dash = false;
+        } else if (ch.is_whitespace() || matches!(ch, '-' | '_'))
+            && !previous_was_dash
+            && !slug.is_empty()
+        {
+            slug.push('-');
+            previous_was_dash = true;
+        }
+    }
+
+    let slug = slug.trim_matches('-').to_string();
+    if slug.is_empty() {
+        "section".to_string()
+    } else {
+        slug
+    }
+}
+
+fn inject_heading_ids(mut html: String, headings: &[PostHeading]) -> String {
+    let mut search_from = 0;
+
+    for heading in headings {
+        let tag = format!("<h{}>", heading.level);
+        if let Some(relative_pos) = html[search_from..].find(&tag) {
+            let start = search_from + relative_pos;
+            let replacement = format!("<h{} id=\"{}\">", heading.level, heading.id);
+            html.replace_range(start..start + tag.len(), &replacement);
+            search_from = start + replacement.len();
+        }
+    }
+
+    html
 }

@@ -1,5 +1,5 @@
 use crate::components::PostPayload;
-use crate::components::{card::Card, page::Page};
+use crate::components::{card::Card, draggable_toc::DraggableToc, page::Page};
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
@@ -42,6 +42,7 @@ pub fn post_view(props: &PostViewProps) -> Html {
             <Card class={classes!("article")}>
                 { injected }
             </Card>
+            <DraggableToc headings={props.post.headings.clone()} />
         </Page>
     }
 }

@@ -1,6 +1,7 @@
 pub mod about_me_view;
 pub mod archive_view;
 pub mod card;
+pub mod draggable_toc;
 pub mod error_view;
 pub mod home_view;
 pub mod loading_view;
@@ -24,7 +25,16 @@ pub struct PostPayload {
     pub path: String,
     pub modified_at_unix: Option<u64>,
     pub metadata: FrontMatter,
+    #[serde(default)]
+    pub headings: Vec<PostHeading>,
     pub content: String,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct PostHeading {
+    pub level: u8,
+    pub text: String,
+    pub id: String,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
