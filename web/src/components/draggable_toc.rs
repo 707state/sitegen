@@ -3,6 +3,7 @@ use gloo::events::EventListener;
 use gloo::timers::callback::Timeout;
 use gloo::utils::{document, window};
 use wasm_bindgen::JsCast;
+use web_sys::TouchEvent;
 use yew::prelude::*;
 
 #[derive(Clone, PartialEq)]
@@ -40,22 +41,54 @@ pub fn draggable_toc(props: &DraggableTocProps) -> Html {
             let listeners = active_drag.clone().map(|active_drag| {
                 let panel_ref_for_move = panel_ref.clone();
                 let position_for_move = position.clone();
+                let active_drag_for_mouse = active_drag.clone();
                 let drag_state_for_up = drag_state.clone();
                 let move_listener = EventListener::new(&document(), "mousemove", move |event| {
                     let Some(mouse_event) = event.dyn_ref::<web_sys::MouseEvent>() else {
                         return;
                     };
                     let (panel_w, panel_h) = panel_size(&panel_ref_for_move);
-                    let next_x = active_drag.panel_x + f64::from(mouse_event.client_x())
-                        - active_drag.pointer_x;
-                    let next_y = active_drag.panel_y + f64::from(mouse_event.client_y())
-                        - active_drag.pointer_y;
+                    let next_x = active_drag_for_mouse.panel_x + f64::from(mouse_event.client_x())
+                        - active_drag_for_mouse.pointer_x;
+                    let next_y = active_drag_for_mouse.panel_y + f64::from(mouse_event.client_y())
+                        - active_drag_for_mouse.pointer_y;
                     position_for_move.set(clamp_position(next_x, next_y, panel_w, panel_h));
+                });
+                let panel_ref_for_touch = panel_ref.clone();
+                let position_for_touch = position.clone();
+                let active_drag_for_touch = active_drag.clone();
+                let touch_move_listener = EventListener::new(&document(), "touchmove", move |event| {
+                    let Some(touch_event) = event.dyn_ref::<TouchEvent>() else {
+                        return;
+                    };
+                    let Some((client_x, client_y)) = touch_coordinates(touch_event) else {
+                        return;
+                    };
+                    touch_event.prevent_default();
+                    let (panel_w, panel_h) = panel_size(&panel_ref_for_touch);
+                    let next_x = active_drag_for_touch.panel_x + client_x - active_drag_for_touch.pointer_x;
+                    let next_y = active_drag_for_touch.panel_y + client_y - active_drag_for_touch.pointer_y;
+                    position_for_touch.set(clamp_position(next_x, next_y, panel_w, panel_h));
                 });
                 let up_listener = EventListener::new(&document(), "mouseup", move |_| {
                     drag_state_for_up.set(None);
                 });
-                (move_listener, up_listener)
+                let drag_state_for_touch_end = drag_state.clone();
+                let touch_end_listener = EventListener::new(&document(), "touchend", move |_| {
+                    drag_state_for_touch_end.set(None);
+                });
+                let drag_state_for_touch_cancel = drag_state.clone();
+                let touch_cancel_listener =
+                    EventListener::new(&document(), "touchcancel", move |_| {
+                        drag_state_for_touch_cancel.set(None);
+                    });
+                (
+                    move_listener,
+                    touch_move_listener,
+                    up_listener,
+                    touch_end_listener,
+                    touch_cancel_listener,
+                )
             });
 
             move || {
@@ -72,6 +105,23 @@ pub fn draggable_toc(props: &DraggableTocProps) -> Html {
             drag_state.set(Some(DragState {
                 pointer_x: f64::from(event.client_x()),
                 pointer_y: f64::from(event.client_y()),
+                panel_x: (*position).0,
+                panel_y: (*position).1,
+            }));
+        })
+    };
+
+    let on_touch_drag_start = {
+        let drag_state = drag_state.clone();
+        let position = position.clone();
+        Callback::from(move |event: TouchEvent| {
+            let Some((client_x, client_y)) = touch_coordinates(&event) else {
+                return;
+            };
+            event.prevent_default();
+            drag_state.set(Some(DragState {
+                pointer_x: client_x,
+                pointer_y: client_y,
                 panel_x: (*position).0,
                 panel_y: (*position).1,
             }));
@@ -121,7 +171,12 @@ pub fn draggable_toc(props: &DraggableTocProps) -> Html {
         <aside ref={panel_ref} class={panel_classes} style={panel_style}>
             <div class="post-toc-card">
                 <div class="post-toc-toolbar">
-                    <button type="button" class="post-toc-drag-handle" onmousedown={on_drag_start}>
+                    <button
+                        type="button"
+                        class="post-toc-drag-handle"
+                        onmousedown={on_drag_start}
+                        ontouchstart={on_touch_drag_start}
+                    >
                         { "目录" }
                     </button>
                     <button type="button" class="post-toc-toggle" onclick={on_toggle}>
@@ -191,4 +246,12 @@ fn window_size() -> (f64, f64) {
         .and_then(|value| value.as_f64())
         .unwrap_or(720.0);
     (viewport_w, viewport_h)
+}
+
+fn touch_coordinates(event: &TouchEvent) -> Option<(f64, f64)> {
+    let touch = event
+        .touches()
+        .item(0)
+        .or_else(|| event.changed_touches().item(0))?;
+    Some((f64::from(touch.client_x()), f64::from(touch.client_y())))
 }
