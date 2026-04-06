@@ -43,6 +43,7 @@ fn app_shell() -> Html {
     let search_keyword = use_state(String::new);
     let is_search_open = use_state(|| false);
     let is_about_open = use_state(|| false);
+    let is_cube_open = use_state(|| false);
     let navigator = use_navigator();
     let route = use_route::<Route>().unwrap_or(Route::Home);
     let route_path = match &route {
@@ -152,6 +153,10 @@ fn app_shell() -> Html {
         let is_about_open = is_about_open.clone();
         Callback::from(move |_| is_about_open.set(!*is_about_open))
     };
+    let on_toggle_cube = {
+        let is_cube_open = is_cube_open.clone();
+        Callback::from(move |_| is_cube_open.set(!*is_cube_open))
+    };
 
     if let Some(err) = (*error).clone() {
         return html! {
@@ -224,7 +229,7 @@ fn app_shell() -> Html {
                         is_open={*is_about_open}
                         on_toggle_panel={on_toggle_about_panel}
                     />
-                    <WebglCube collapsed={!*is_search_open} />
+                    <WebglCube collapsed={!*is_cube_open} on_toggle={on_toggle_cube} />
                 </>
             }
         }

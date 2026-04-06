@@ -476,6 +476,40 @@ body {
     display: block;
 }
 
+.cube-toggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--sky-700);
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+    transition:
+        transform 180ms ease,
+        box-shadow 180ms ease,
+        opacity 180ms ease;
+}
+
+.cube-toggle:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(20, 90, 130, 0.12);
+}
+
+.cube-dock.is-collapsed .cube-toggle {
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+}
+
+.cube-dock.is-collapsed .cube-toggle:hover {
+    transform: translate(-50%, calc(-50% - 1px));
+}
+
 .article {
     line-height: 1.65;
 }
@@ -726,6 +760,11 @@ body {
         height: var(--mobile-panel-collapsed);
         transform: scale(1);
         opacity: 0.45;
+    }
+
+    .cube-toggle {
+        font-size: 11px;
+        padding: 5px 9px;
     }
 
     .about-panel {

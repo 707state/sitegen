@@ -9,6 +9,7 @@ use yew::prelude::*;
 #[derive(Properties, PartialEq)]
 pub struct WebglCubeProps {
     pub collapsed: bool,
+    pub on_toggle: Callback<()>,
 }
 
 #[derive(Default)]
@@ -20,7 +21,12 @@ struct MotionState {
 }
 
 #[function_component(WebglCube)]
-pub fn webgl_cube(WebglCubeProps { collapsed }: &WebglCubeProps) -> Html {
+pub fn webgl_cube(
+    WebglCubeProps {
+        collapsed,
+        on_toggle,
+    }: &WebglCubeProps,
+) -> Html {
     let canvas_ref = use_node_ref();
     let collapsed_flag = use_mut_ref(|| *collapsed);
 
@@ -206,9 +212,17 @@ pub fn webgl_cube(WebglCubeProps { collapsed }: &WebglCubeProps) -> Html {
     } else {
         classes!("cube-dock")
     };
+    let toggle_label = if *collapsed { "展开" } else { "收起" };
+    let on_toggle_click = {
+        let on_toggle = on_toggle.clone();
+        Callback::from(move |_| on_toggle.emit(()))
+    };
 
     html! {
         <div class={class}>
+            <button type="button" class="cube-toggle" onclick={on_toggle_click}>
+                { toggle_label }
+            </button>
             <canvas ref={canvas_ref} class="cube-canvas" width="220" height="220" />
         </div>
     }
