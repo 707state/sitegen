@@ -129,6 +129,20 @@ body {
         transform 180ms ease;
 }
 
+.post-cover {
+    flex-shrink: 0;
+    border-radius: 8px;
+    display: block;
+    object-fit: cover;
+    box-shadow: 0 2px 6px rgba(20, 90, 130, 0.18);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.link-button:hover .post-cover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(20, 90, 130, 0.28);
+}
+
 .link-button:hover {
     border-color: var(--border);
     box-shadow: 0 8px 16px rgba(20, 90, 130, 0.1);

@@ -1,6 +1,7 @@
 pub mod about_me_view;
 pub mod archive_view;
 pub mod card;
+pub mod cover;
 pub mod draggable_toc;
 pub mod error_view;
 pub mod home_view;

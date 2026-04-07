@@ -1,4 +1,4 @@
-use crate::components::card::Card;
+use crate::components::{card::Card, cover::PostCover};
 use std::collections::HashMap;
 use yew::prelude::*;
 #[derive(Properties, PartialEq)]
@@ -50,6 +50,7 @@ pub fn topic_card(
                                 html! {
                                     <li>
                                         <button onclick={on_open} class="link-button">
+                                            <PostCover cover_key={path.clone()} width={32} height={32} />
                                             { title }
                                         </button>
                                     </li>

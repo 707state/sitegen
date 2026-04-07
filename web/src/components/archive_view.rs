@@ -1,4 +1,4 @@
-use crate::components::{TocItem, card::Card};
+use crate::components::{TocItem, card::Card, cover::PostCover};
 use chrono::Datelike;
 use yew::prelude::*;
 
@@ -63,15 +63,20 @@ pub fn archive_view(
                                         let cb = on_open_post.clone();
                                         Callback::from(move |_| cb.emit(path.clone()))
                                     };
-                                    html!{
-                                        <li>
-                                            <button onclick={on_open} class="link-button">
-                                                <span class="archive-date">
-                                                    { it.date.format("%m-%d").to_string() }
-                                                </span>
-                                                <span>{ it.title }</span>
-                                            </button>
-                                        </li>
+                                    {
+                                        let cover_key = it.path.clone();
+                                        let title_text = it.title.clone();
+                                        html!{
+                                            <li>
+                                                <button onclick={on_open} class="link-button">
+                                                    <PostCover cover_key={cover_key} width={40} height={40} />
+                                                    <span class="archive-date">
+                                                        { it.date.format("%m-%d").to_string() }
+                                                    </span>
+                                                    <span>{ title_text }</span>
+                                                </button>
+                                            </li>
+                                        }
                                     }
                                 })
                             }
