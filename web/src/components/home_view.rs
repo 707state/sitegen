@@ -1,3 +1,4 @@
+use crate::components::webgl_ring::WebglRing;
 use crate::components::{TocItem, archive_view::ArchiveView, page::Page, topic_card::TopicCard};
 use std::collections::{HashMap, HashSet};
 use yew::prelude::*;
@@ -17,6 +18,7 @@ pub struct HomeViewProps {
 enum HomeMode {
     Archive,
     Topics,
+    Ring,
 }
 #[function_component(HomeView)]
 pub fn home_view(
@@ -29,7 +31,7 @@ pub fn home_view(
         on_open_post,
     }: &HomeViewProps,
 ) -> Html {
-    let mode = use_state(|| HomeMode::Archive);
+    let mode = use_state(|| HomeMode::Ring);
     let set_archive = {
         let mode = mode.clone();
         Callback::from(move |_| mode.set(HomeMode::Archive))
@@ -38,9 +40,14 @@ pub fn home_view(
         let mode = mode.clone();
         Callback::from(move |_| mode.set(HomeMode::Topics))
     };
+    let set_ring = {
+        let mode = mode.clone();
+        Callback::from(move |_| mode.set(HomeMode::Ring))
+    };
     let header = {
         let is_archive = *mode == HomeMode::Archive;
         let is_topics = *mode == HomeMode::Topics;
+        let is_ring = *mode == HomeMode::Ring;
 
         html! {
             <header class="header">
@@ -49,7 +56,8 @@ pub fn home_view(
                     <p class="subtitle">
                         {
                             if is_archive { "Archive (by date)" }
-                            else { "Browse by topic" }
+                            else if is_topics { "Browse by topic" }
+                            else { "Planet Ring" }
                         }
                     </p>
                 </div>
@@ -69,6 +77,13 @@ pub fn home_view(
                     >
                         { "Topics" }
                     </button>
+                    <button
+                        class="home-button"
+                        onclick={set_ring}
+                        style={ if is_ring { "" } else { "opacity:0.6; filter:saturate(0.6);" } }
+                    >
+                        { "Ring" }
+                    </button>
                 </div>
             </header>
         }
@@ -79,6 +94,13 @@ pub fn home_view(
             if *mode == HomeMode::Archive {
                 html! {
                     <ArchiveView
+                        toc_items={toc_items.clone()}
+                        on_open_post={on_open_post.clone()}
+                    />
+                }
+            } else if *mode == HomeMode::Ring {
+                html! {
+                    <WebglRing
                         toc_items={toc_items.clone()}
                         on_open_post={on_open_post.clone()}
                     />

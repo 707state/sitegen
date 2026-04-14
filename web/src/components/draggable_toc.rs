@@ -57,19 +57,22 @@ pub fn draggable_toc(props: &DraggableTocProps) -> Html {
                 let panel_ref_for_touch = panel_ref.clone();
                 let position_for_touch = position.clone();
                 let active_drag_for_touch = active_drag.clone();
-                let touch_move_listener = EventListener::new(&document(), "touchmove", move |event| {
-                    let Some(touch_event) = event.dyn_ref::<TouchEvent>() else {
-                        return;
-                    };
-                    let Some((client_x, client_y)) = touch_coordinates(touch_event) else {
-                        return;
-                    };
-                    touch_event.prevent_default();
-                    let (panel_w, panel_h) = panel_size(&panel_ref_for_touch);
-                    let next_x = active_drag_for_touch.panel_x + client_x - active_drag_for_touch.pointer_x;
-                    let next_y = active_drag_for_touch.panel_y + client_y - active_drag_for_touch.pointer_y;
-                    position_for_touch.set(clamp_position(next_x, next_y, panel_w, panel_h));
-                });
+                let touch_move_listener =
+                    EventListener::new(&document(), "touchmove", move |event| {
+                        let Some(touch_event) = event.dyn_ref::<TouchEvent>() else {
+                            return;
+                        };
+                        let Some((client_x, client_y)) = touch_coordinates(touch_event) else {
+                            return;
+                        };
+                        touch_event.prevent_default();
+                        let (panel_w, panel_h) = panel_size(&panel_ref_for_touch);
+                        let next_x = active_drag_for_touch.panel_x + client_x
+                            - active_drag_for_touch.pointer_x;
+                        let next_y = active_drag_for_touch.panel_y + client_y
+                            - active_drag_for_touch.pointer_y;
+                        position_for_touch.set(clamp_position(next_x, next_y, panel_w, panel_h));
+                    });
                 let up_listener = EventListener::new(&document(), "mouseup", move |_| {
                     drag_state_for_up.set(None);
                 });

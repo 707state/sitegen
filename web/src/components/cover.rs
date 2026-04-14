@@ -62,29 +62,65 @@ fn fnv1a(s: &str) -> u64 {
 /// (背景色, [前景色列表])
 const PALETTES: &[(&str, &[&str])] = &[
     // 深夜蓝
-    ("#060d1a", &["#0f3460", "#1a7abf", "#4db8ff", "#a8deff", "#2e5f8a"]),
+    (
+        "#060d1a",
+        &["#0f3460", "#1a7abf", "#4db8ff", "#a8deff", "#2e5f8a"],
+    ),
     // 暮光橙
-    ("#1a0a00", &["#c45c00", "#f5a623", "#ffd580", "#ffedba", "#e07b39"]),
+    (
+        "#1a0a00",
+        &["#c45c00", "#f5a623", "#ffd580", "#ffedba", "#e07b39"],
+    ),
     // 翡翠绿
-    ("#001510", &["#066540", "#0fa86a", "#3be8a0", "#a3f5d8", "#1dc47c"]),
+    (
+        "#001510",
+        &["#066540", "#0fa86a", "#3be8a0", "#a3f5d8", "#1dc47c"],
+    ),
     // 暗紫幻境
-    ("#0a0014", &["#4a1080", "#8b3fcf", "#c49cf5", "#ecdeff", "#6e28b0"]),
+    (
+        "#0a0014",
+        &["#4a1080", "#8b3fcf", "#c49cf5", "#ecdeff", "#6e28b0"],
+    ),
     // 珊瑚玫瑰
-    ("#1a0010", &["#9c1246", "#e83d8a", "#f7a8cf", "#ffe0ef", "#c42e68"]),
+    (
+        "#1a0010",
+        &["#9c1246", "#e83d8a", "#f7a8cf", "#ffe0ef", "#c42e68"],
+    ),
     // 钢铁蓝灰
-    ("#080f18", &["#1e3a5f", "#2e6096", "#5b9bd5", "#b8d8f8", "#3d7abf"]),
+    (
+        "#080f18",
+        &["#1e3a5f", "#2e6096", "#5b9bd5", "#b8d8f8", "#3d7abf"],
+    ),
     // 极光绿紫
-    ("#020d08", &["#00573f", "#00b877", "#7affd4", "#30cfae", "#9b59b6"]),
+    (
+        "#020d08",
+        &["#00573f", "#00b877", "#7affd4", "#30cfae", "#9b59b6"],
+    ),
     // 熔岩红
-    ("#100500", &["#8b1a00", "#d43f00", "#ff7a2f", "#ffc49a", "#f05020"]),
+    (
+        "#100500",
+        &["#8b1a00", "#d43f00", "#ff7a2f", "#ffc49a", "#f05020"],
+    ),
     // 银河黑金
-    ("#050505", &["#7a6200", "#c4a400", "#f5d000", "#fff3a0", "#e8b800"]),
+    (
+        "#050505",
+        &["#7a6200", "#c4a400", "#f5d000", "#fff3a0", "#e8b800"],
+    ),
     // 赛博青
-    ("#00100f", &["#006b60", "#00c4b4", "#4dfff0", "#b3fff9", "#00e8d8"]),
+    (
+        "#00100f",
+        &["#006b60", "#00c4b4", "#4dfff0", "#b3fff9", "#00e8d8"],
+    ),
     // 暮霞粉紫
-    ("#12000e", &["#7a1060", "#c440a0", "#f58de0", "#ffd8f5", "#e060c0"]),
+    (
+        "#12000e",
+        &["#7a1060", "#c440a0", "#f58de0", "#ffd8f5", "#e060c0"],
+    ),
     // 森林迷雾
-    ("#040d06", &["#1a4a26", "#2e8045", "#60c87a", "#b8f0c8", "#42a85e"]),
+    (
+        "#040d06",
+        &["#1a4a26", "#2e8045", "#60c87a", "#b8f0c8", "#42a85e"],
+    ),
 ];
 
 // ─── 颜色工具 ──────────────────────────────────────────────────────────────────
@@ -242,17 +278,17 @@ fn draw_voronoi(
 
 // ─── 3. Low Poly ──────────────────────────────────────────────────────────────
 
-fn draw_low_poly(
-    ctx: &CanvasRenderingContext2d,
-    rng: &mut Rng,
-    colors: &[&str],
-    w: f64,
-    h: f64,
-) {
+fn draw_low_poly(ctx: &CanvasRenderingContext2d, rng: &mut Rng, colors: &[&str], w: f64, h: f64) {
     // 构建点集：边界角 + 边界中点 + 随机内部点
     let mut pts: Vec<(f64, f64)> = vec![
-        (0.0, 0.0), (w, 0.0), (w, h), (0.0, h),
-        (w * 0.5, 0.0), (w, h * 0.5), (w * 0.5, h), (0.0, h * 0.5),
+        (0.0, 0.0),
+        (w, 0.0),
+        (w, h),
+        (0.0, h),
+        (w * 0.5, 0.0),
+        (w, h * 0.5),
+        (w * 0.5, h),
+        (0.0, h * 0.5),
     ];
     let n_inner = 10 + rng.usize_n(8);
     for _ in 0..n_inner {
@@ -341,9 +377,7 @@ fn draw_ripple(
     // 叠加径向渐变：中心亮
     for &(cx, cy) in &centers {
         let r = max_r * 0.6;
-        let grad = ctx
-            .create_radial_gradient(cx, cy, 0.0, cx, cy, r)
-            .unwrap();
+        let grad = ctx.create_radial_gradient(cx, cy, 0.0, cx, cy, r).unwrap();
         let (br, bg2, bb) = parse_hex(bg);
         let _ = grad.add_color_stop(0.0, &rgba(br, bg2, bb, 0.0));
         let _ = grad.add_color_stop(1.0, &rgba(br, bg2, bb, 0.55));
@@ -367,13 +401,7 @@ fn draw_ripple(
 
 // ─── 5. Nebula（星云粒子） ─────────────────────────────────────────────────────
 
-fn draw_nebula(
-    ctx: &CanvasRenderingContext2d,
-    rng: &mut Rng,
-    colors: &[&str],
-    w: f64,
-    h: f64,
-) {
+fn draw_nebula(ctx: &CanvasRenderingContext2d, rng: &mut Rng, colors: &[&str], w: f64, h: f64) {
     // 几个"星云核"，每个核周围散布粒子
     let n_cores = 2 + rng.usize_n(3);
     let cores: Vec<(f64, f64, f64)> = (0..n_cores)
@@ -443,13 +471,7 @@ fn draw_nebula(
 
 // ─── 6. Flow Grid（流动网格） ──────────────────────────────────────────────────
 
-fn draw_flow_grid(
-    ctx: &CanvasRenderingContext2d,
-    rng: &mut Rng,
-    colors: &[&str],
-    w: f64,
-    h: f64,
-) {
+fn draw_flow_grid(ctx: &CanvasRenderingContext2d, rng: &mut Rng, colors: &[&str], w: f64, h: f64) {
     let cols = 6 + rng.usize_n(5);
     let rows = 5 + rng.usize_n(4);
     let cell_w = w / cols as f64;
@@ -508,13 +530,7 @@ fn draw_flow_grid(
 
 // ─── 7. Crystal（几何晶体） ────────────────────────────────────────────────────
 
-fn draw_crystal(
-    ctx: &CanvasRenderingContext2d,
-    rng: &mut Rng,
-    colors: &[&str],
-    w: f64,
-    h: f64,
-) {
+fn draw_crystal(ctx: &CanvasRenderingContext2d, rng: &mut Rng, colors: &[&str], w: f64, h: f64) {
     let n_shards = 12 + rng.usize_n(12);
     for i in 0..n_shards {
         // 随机中心
@@ -531,7 +547,11 @@ fn draw_crystal(
         let point_count = if is_star { sides * 2 } else { sides };
         for p in 0..point_count {
             let angle = rot + TAU * p as f64 / point_count as f64;
-            let r = if is_star && p % 2 == 1 { r_inner } else { r_outer };
+            let r = if is_star && p % 2 == 1 {
+                r_inner
+            } else {
+                r_outer
+            };
             let px = cx + r * angle.cos();
             let py = cy + r * angle.sin();
             if p == 0 {
@@ -564,7 +584,10 @@ fn draw_crystal(
             ctx.set_line_width(0.6);
             ctx.begin_path();
             ctx.move_to(cx, cy);
-            ctx.line_to(cx + r_outer * highlight_angle.cos(), cy + r_outer * highlight_angle.sin());
+            ctx.line_to(
+                cx + r_outer * highlight_angle.cos(),
+                cy + r_outer * highlight_angle.sin(),
+            );
             let _ = ctx.stroke();
         }
     }
@@ -627,7 +650,9 @@ fn draw_rays(
     // 背景角落压暗
     let (br, bg2, bb) = parse_hex(bg);
     for &(corner_x, corner_y) in &[(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)] {
-        if let Ok(grad) = ctx.create_radial_gradient(corner_x, corner_y, 0.0, corner_x, corner_y, max_r * 0.6) {
+        if let Ok(grad) =
+            ctx.create_radial_gradient(corner_x, corner_y, 0.0, corner_x, corner_y, max_r * 0.6)
+        {
             let _ = grad.add_color_stop(0.0, &rgba(br, bg2, bb, 0.4));
             let _ = grad.add_color_stop(1.0, &rgba(br, bg2, bb, 0.0));
             ctx.set_global_alpha(1.0);
@@ -640,13 +665,7 @@ fn draw_rays(
 
 // ─── 9. Circuit（电路板/迷宫） ────────────────────────────────────────────────
 
-fn draw_circuit(
-    ctx: &CanvasRenderingContext2d,
-    rng: &mut Rng,
-    colors: &[&str],
-    w: f64,
-    h: f64,
-) {
+fn draw_circuit(ctx: &CanvasRenderingContext2d, rng: &mut Rng, colors: &[&str], w: f64, h: f64) {
     let grid = 6.0 + rng.range(0.0, 4.0); // 网格间距
     let line_w = rng.range(0.5, 1.2);
 
@@ -732,7 +751,9 @@ fn draw_circuit(
 
 fn overlay_vignette(ctx: &CanvasRenderingContext2d, w: f64, h: f64) {
     // 暗角压边
-    if let Ok(grad) = ctx.create_radial_gradient(w * 0.5, h * 0.5, 0.0, w * 0.5, h * 0.5, w.hypot(h) * 0.6) {
+    if let Ok(grad) =
+        ctx.create_radial_gradient(w * 0.5, h * 0.5, 0.0, w * 0.5, h * 0.5, w.hypot(h) * 0.6)
+    {
         let _ = grad.add_color_stop(0.0, "rgba(0,0,0,0)");
         let _ = grad.add_color_stop(0.7, "rgba(0,0,0,0)");
         let _ = grad.add_color_stop(1.0, "rgba(0,0,0,0.45)");
@@ -740,7 +761,9 @@ fn overlay_vignette(ctx: &CanvasRenderingContext2d, w: f64, h: f64) {
         ctx.fill_rect(0.0, 0.0, w, h);
     }
     // 中心轻微高光（让图像更有立体感）
-    if let Ok(grad) = ctx.create_radial_gradient(w * 0.5, h * 0.4, 0.0, w * 0.5, h * 0.4, w.max(h) * 0.55) {
+    if let Ok(grad) =
+        ctx.create_radial_gradient(w * 0.5, h * 0.4, 0.0, w * 0.5, h * 0.4, w.max(h) * 0.55)
+    {
         let _ = grad.add_color_stop(0.0, "rgba(255,255,255,0.06)");
         let _ = grad.add_color_stop(1.0, "rgba(255,255,255,0)");
         ctx.set_fill_style_canvas_gradient(&grad);

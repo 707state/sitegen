@@ -11,6 +11,7 @@ pub mod post_view;
 pub mod search_view;
 pub mod topic_card;
 pub mod webgl_cube;
+pub mod webgl_ring;
 use chrono::NaiveDate;
 use serde::Deserialize;
 #[derive(Debug, Clone, Deserialize, PartialEq)]
