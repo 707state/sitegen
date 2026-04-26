@@ -17,7 +17,7 @@ fn main() -> Result<()> {
         }
         _ => {
             let paths: Vec<PathBuf> = args.iter().skip(1).map(PathBuf::from).collect();
-            let index: Index = paths.try_into()?;
+            let _index: Index = paths.try_into()?;
             Ok(())
         }
     }

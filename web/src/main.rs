@@ -13,6 +13,7 @@ pub mod components;
 #[derive(Debug, Clone, Deserialize)]
 pub struct IndexPayload {
     pub paragraph_under_certain_topic: HashMap<String, Vec<String>>,
+    pub paragraph_under_certain_series: HashMap<String, Vec<String>>,
     pub table_of_content: Vec<TocItem>,
 }
 
@@ -40,6 +41,7 @@ fn app_shell() -> Html {
     let error = use_state(|| None::<String>);
     let is_loading = use_state(|| false);
     let expanded_topics = use_state(HashSet::<String>::new);
+    let expanded_series = use_state(HashSet::<String>::new);
     let search_keyword = use_state(String::new);
     let is_search_open = use_state(|| false);
     let is_about_open = use_state(|| false);
@@ -145,6 +147,18 @@ fn app_shell() -> Html {
             search_keyword.set(keyword.trim().to_string());
         })
     };
+    let on_toggle_series = {
+        let expanded_series = expanded_series.clone();
+        Callback::from(move |series: String| {
+            let mut next = (*expanded_series).clone();
+            if next.contains(&series) {
+                next.remove(&series);
+            } else {
+                next.insert(series);
+            }
+            expanded_series.set(next);
+        })
+    };
     let on_toggle_search_panel = {
         let is_search_open = is_search_open.clone();
         Callback::from(move |_| is_search_open.set(!*is_search_open))
@@ -182,12 +196,19 @@ fn app_shell() -> Html {
                 .map(|(k, v)| (k.clone(), v.clone()))
                 .collect();
             topics.sort_by(|a, b| a.0.cmp(&b.0));
+            let mut series: Vec<(String, Vec<String>)> = index_payload
+                .paragraph_under_certain_series
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect();
+            series.sort_by(|a, b| a.0.cmp(&b.0));
             let toc_items = index_payload.table_of_content;
             let title_to_path: HashMap<String, String> = toc_items
                 .iter()
                 .map(|item| (item.title.clone(), item.path.clone()))
                 .collect();
             let expanded = (*expanded_topics).clone();
+            let expanded_series = (*expanded_series).clone();
             let search_keyword = if (*search_keyword).trim().is_empty() {
                 None
             } else {
@@ -205,9 +226,12 @@ fn app_shell() -> Html {
                         <HomeView
                             toc_items={toc_items.clone()}
                             topics={topics}
+                            series={series}
                             title_to_path={title_to_path}
                             expanded_topics={expanded}
+                            expanded_series={expanded_series}
                             on_toggle_topic={on_toggle_topic}
+                            on_toggle_series={on_toggle_series}
                             on_open_post={on_open_post.clone()}
                         />
                         <SearchView

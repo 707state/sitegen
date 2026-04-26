@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use yew::prelude::*;
 #[derive(Properties, PartialEq)]
 pub struct TopicCardProps {
-    pub topic: String,
+    pub label: String,
     pub titles: Vec<String>,
     pub title_to_path: HashMap<String, String>,
     pub is_open: bool,
@@ -15,7 +15,7 @@ pub struct TopicCardProps {
 #[function_component(TopicCard)]
 pub fn topic_card(
     TopicCardProps {
-        topic,
+        label,
         titles,
         title_to_path,
         is_open,
@@ -23,17 +23,17 @@ pub fn topic_card(
         on_open_post,
     }: &TopicCardProps,
 ) -> Html {
-    let topic = topic.clone();
+    let label = label.clone();
     let on_toggle_cb = {
-        let topic = topic.clone();
+        let label = label.clone();
         let cb = on_toggle.clone();
-        Callback::from(move |_| cb.emit(topic.clone()))
+        Callback::from(move |_| cb.emit(label.clone()))
     };
     html! {
         <Card>
         <button onclick={on_toggle_cb} class="topic-button">
             { if *is_open { "▼ " } else { "▶ " } }
-            { &topic }
+            { &label }
         </button>
         {
             if *is_open{

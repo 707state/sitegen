@@ -17,6 +17,8 @@ pub struct FrontMatter {
     pub title: String,
     pub author: String,
     pub tags: Vec<String>,
+    #[serde(default)]
+    pub series: Option<String>,
     pub date: NaiveDate,
 }
 #[derive(Debug, Serialize)]
@@ -40,9 +42,8 @@ pub struct PostHeading {
 #[derive(Debug, Serialize)]
 pub struct Index {
     paragraph_under_certain_topic: HashMap<String, Vec<String>>,
+    paragraph_under_certain_series: HashMap<String, Vec<String>>,
     table_of_content: Vec<TableOfContentItem>,
-    #[serde(skip_serializing)]
-    markdowns: Vec<Markdown>,
 }
 
 #[derive(Debug, Serialize)]
@@ -133,6 +134,12 @@ struct BuiltMarkdown {
     out_path: PathBuf,
 }
 
+#[derive(Debug)]
+struct SeriesPostEntry {
+    title: String,
+    date: NaiveDate,
+}
+
 fn build_markdown_and_write_json(path: &Path, dist_dir: &Path) -> anyhow::Result<BuiltMarkdown> {
     // 1) 转成 Markdown
     let one_md: Markdown = path
@@ -169,7 +176,7 @@ impl TryFrom<Vec<PathBuf>> for Index {
         let dist_dir = PathBuf::from("dist");
         fs::create_dir_all(&dist_dir).context("failed to create dist/")?;
         let mut paragraph_under_certain_topic: HashMap<String, Vec<String>> = HashMap::new();
-        let mut markdowns: Vec<Markdown> = Vec::new();
+        let mut series_posts: HashMap<String, Vec<SeriesPostEntry>> = HashMap::new();
         let mut table_of_content: Vec<TableOfContentItem> = Vec::new();
         for path in paths {
             if !path.exists() {
@@ -178,20 +185,14 @@ impl TryFrom<Vec<PathBuf>> for Index {
             }
             if path.is_file() && is_markdown(&path) {
                 let built_md = build_markdown_and_write_json(&path, &dist_dir)?;
-                let title = built_md.markdown.metadata.title.clone();
-                let rel_path = relative_json_path(&built_md.out_path, &dist_dir);
-                for tag in &built_md.markdown.metadata.tags {
-                    paragraph_under_certain_topic
-                        .entry(tag.clone())
-                        .or_default()
-                        .push(title.clone());
-                }
-                table_of_content.push(TableOfContentItem {
-                    title,
-                    path: rel_path,
-                    date: built_md.markdown.metadata.date,
-                });
-                markdowns.push(built_md.markdown);
+                append_built_markdown(
+                    built_md,
+                    &dist_dir,
+                    &mut paragraph_under_certain_topic,
+                    &mut series_posts,
+                    &mut table_of_content,
+                );
+                continue;
             }
             for entry in walkdir::WalkDir::new(&path).follow_links(true) {
                 let entry = match entry {
@@ -209,27 +210,21 @@ impl TryFrom<Vec<PathBuf>> for Index {
                     continue;
                 }
                 let built_md = build_markdown_and_write_json(md_path, &dist_dir)?;
-                let title = built_md.markdown.metadata.title.clone();
-                let rel_path = relative_json_path(&built_md.out_path, &dist_dir);
-                for tag in &built_md.markdown.metadata.tags {
-                    paragraph_under_certain_topic
-                        .entry(tag.clone())
-                        .or_default()
-                        .push(title.clone());
-                }
-                table_of_content.push(TableOfContentItem {
-                    title,
-                    path: rel_path,
-                    date: built_md.markdown.metadata.date,
-                });
-                markdowns.push(built_md.markdown);
+                append_built_markdown(
+                    built_md,
+                    &dist_dir,
+                    &mut paragraph_under_certain_topic,
+                    &mut series_posts,
+                    &mut table_of_content,
+                );
             }
         }
         table_of_content.sort_by(|a, b| b.date.cmp(&a.date));
+        let paragraph_under_certain_series = finalize_series_map(series_posts);
         let index = Self {
             table_of_content,
             paragraph_under_certain_topic,
-            markdowns,
+            paragraph_under_certain_series,
         };
         let index_path = dist_dir.join("index.json");
         let index_json = serde_json::to_string_pretty(&index).context("serialize index failed")?;
@@ -237,6 +232,54 @@ impl TryFrom<Vec<PathBuf>> for Index {
             .with_context(|| format!("write to {} failed", index_path.display()))?;
         Ok(index)
     }
+}
+
+fn append_built_markdown(
+    built_md: BuiltMarkdown,
+    dist_dir: &Path,
+    paragraph_under_certain_topic: &mut HashMap<String, Vec<String>>,
+    series_posts: &mut HashMap<String, Vec<SeriesPostEntry>>,
+    table_of_content: &mut Vec<TableOfContentItem>,
+) {
+    let title = built_md.markdown.metadata.title.clone();
+    let date = built_md.markdown.metadata.date;
+    let rel_path = relative_json_path(&built_md.out_path, dist_dir);
+
+    for tag in &built_md.markdown.metadata.tags {
+        paragraph_under_certain_topic
+            .entry(tag.clone())
+            .or_default()
+            .push(title.clone());
+    }
+
+    if let Some(series) = built_md.markdown.metadata.series.clone() {
+        series_posts
+            .entry(series)
+            .or_default()
+            .push(SeriesPostEntry {
+                title: title.clone(),
+                date,
+            });
+    }
+
+    table_of_content.push(TableOfContentItem {
+        title,
+        path: rel_path,
+        date,
+    });
+}
+
+fn finalize_series_map(
+    mut series_posts: HashMap<String, Vec<SeriesPostEntry>>,
+) -> HashMap<String, Vec<String>> {
+    series_posts
+        .drain()
+        .map(|(series, mut posts)| {
+            posts.sort_by(|a, b| a.date.cmp(&b.date).then_with(|| a.title.cmp(&b.title)));
+            let titles = posts.into_iter().map(|post| post.title).collect();
+            (series, titles)
+        })
+        .collect()
 }
 
 fn extract_front_matter_from_ast<'a>(root: &'a comrak::nodes::AstNode<'a>) -> Option<String> {
