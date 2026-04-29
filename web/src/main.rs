@@ -1,6 +1,7 @@
 use crate::components::{
     PostPayload, TocItem, about_me_view::AboutMeView, error_view::ErrorView, home_view::HomeView,
-    loading_view::LoadingView, post_view::PostView, search_view::SearchView, webgl_cube::WebglCube,
+    loading_view::LoadingView, post_view::PostView, post_view::SeriesNavItem,
+    search_view::SearchView, webgl_cube::WebglCube,
 };
 use gloo_net::http::Request;
 use serde::Deserialize;
@@ -259,8 +260,25 @@ fn app_shell() -> Html {
         }
         Route::Post { .. } => {
             if let Some(p) = (*post).clone() {
+                let (previous_in_series, next_in_series) =
+                    if let Some(index_payload) = (*index).clone() {
+                        let title_to_path: HashMap<String, String> = index_payload
+                            .table_of_content
+                            .iter()
+                            .map(|item| (item.title.clone(), item.path.clone()))
+                            .collect();
+                        series_neighbors(&p, &index_payload, &title_to_path)
+                    } else {
+                        (None, None)
+                    };
                 html! {
-                    <PostView post={p} on_home={on_home.clone()} />
+                    <PostView
+                        post={p}
+                        on_home={on_home.clone()}
+                        on_open_post={on_open_post.clone()}
+                        previous_in_series={previous_in_series}
+                        next_in_series={next_in_series}
+                    />
                 }
             } else {
                 html! {
@@ -284,4 +302,47 @@ fn content_url(path: &str) -> String {
     } else {
         format!("{}/{}", base, path)
     }
+}
+
+fn series_neighbors(
+    post: &PostPayload,
+    index_payload: &IndexPayload,
+    title_to_path: &HashMap<String, String>,
+) -> (Option<SeriesNavItem>, Option<SeriesNavItem>) {
+    let Some(series_name) = post.metadata.series.as_ref() else {
+        return (None, None);
+    };
+    let Some(series_titles) = index_payload
+        .paragraph_under_certain_series
+        .get(series_name)
+    else {
+        return (None, None);
+    };
+    let Some(current_idx) = series_titles
+        .iter()
+        .position(|title| title == &post.metadata.title)
+    else {
+        return (None, None);
+    };
+
+    let previous = if current_idx > 0 {
+        nav_item_for_title(&series_titles[current_idx - 1], title_to_path)
+    } else {
+        None
+    };
+    let next = series_titles
+        .get(current_idx + 1)
+        .and_then(|title| nav_item_for_title(title, title_to_path));
+
+    (previous, next)
+}
+
+fn nav_item_for_title(
+    title: &str,
+    title_to_path: &HashMap<String, String>,
+) -> Option<SeriesNavItem> {
+    title_to_path.get(title).cloned().map(|path| SeriesNavItem {
+        title: title.to_string(),
+        path,
+    })
 }
