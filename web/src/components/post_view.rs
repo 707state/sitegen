@@ -29,7 +29,7 @@ pub fn post_view(props: &PostViewProps) -> Html {
     let series_name = props.post.metadata.series.clone();
 
     let header = html! {
-        <header class="header">
+        <header class="header post-header">
             <div>
                 <h1 class="title">{ props.post.metadata.title.clone() }</h1>
                 <p class="subtitle">
@@ -47,8 +47,9 @@ pub fn post_view(props: &PostViewProps) -> Html {
     };
 
     html! {
-        <Page {header}>
+        <Page {header} class={classes!("post-page")}>
             <hr class="divider" />
+            <DraggableToc headings={props.post.headings.clone()} />
             <Card class={classes!("article")}>
                 { injected }
             </Card>
@@ -107,7 +108,6 @@ pub fn post_view(props: &PostViewProps) -> Html {
                     Html::default()
                 }
             }
-            <DraggableToc headings={props.post.headings.clone()} />
         </Page>
     }
 }

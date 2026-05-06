@@ -26,8 +26,9 @@ pub fn draggable_toc(props: &DraggableTocProps) -> Html {
     }
 
     let panel_ref = use_node_ref();
-    let collapsed = use_state(|| false);
-    let body_hidden = use_state(|| false);
+    let starts_collapsed = is_compact_viewport();
+    let collapsed = use_state(move || starts_collapsed);
+    let body_hidden = use_state(move || starts_collapsed);
     let position = use_state(default_position);
     let drag_state = use_state(|| None::<DragState>);
     let toggle_timer = use_mut_ref(|| None::<Timeout>);
@@ -249,6 +250,10 @@ fn window_size() -> (f64, f64) {
         .and_then(|value| value.as_f64())
         .unwrap_or(720.0);
     (viewport_w, viewport_h)
+}
+
+fn is_compact_viewport() -> bool {
+    window_size().0 <= 720.0
 }
 
 fn touch_coordinates(event: &TouchEvent) -> Option<(f64, f64)> {
