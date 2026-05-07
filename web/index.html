@@ -7,6 +7,66 @@
         <title>jask's blog</title>
         <link data-trunk rel="css" href="index.css" />
         <link data-trunk rel="copy-dir" href="images" />
+        <script>
+            window.__mathjaxLoaded = false;
+            window.__pendingMathJaxElements = [];
+
+            window.__loadMathJax = function () {
+                if (window.__mathjaxLoaded) return;
+                window.__mathjaxLoaded = true;
+
+                window.MathJax = {
+                    startup: {
+                        ready() {
+                            MathJax.startup.defaultReady();
+                            MathJax.startup.promise.then(() => {
+                                const pending =
+                                    window.__pendingMathJaxElements.splice(0);
+                                if (pending.length === 0) {
+                                    return;
+                                }
+                                MathJax.typesetClear(pending);
+                                MathJax.typesetPromise(pending).catch(
+                                    (error) =>
+                                        console.error(
+                                            "MathJax typeset failed",
+                                            error,
+                                        ),
+                                );
+                            });
+                        },
+                    },
+                };
+
+                var script = document.createElement("script");
+                script.id = "MathJax-script";
+                script.async = true;
+                script.src =
+                    "https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js";
+                document.head.appendChild(script);
+            };
+
+            window.typesetMath = function (element) {
+                window.__loadMathJax();
+                const elements = element ? [element] : undefined;
+                if (
+                    window.MathJax &&
+                    typeof window.MathJax.typesetPromise === "function"
+                ) {
+                    if (typeof window.MathJax.typesetClear === "function") {
+                        window.MathJax.typesetClear(elements);
+                    }
+                    return window.MathJax.typesetPromise(elements).catch(
+                        (error) =>
+                            console.error("MathJax typeset failed", error),
+                    );
+                }
+                if (element) {
+                    window.__pendingMathJaxElements.push(element);
+                }
+                return Promise.resolve();
+            };
+        </script>
         <link rel="icon" type="image/png" href="images/favicon.png" />
     </head>
     <body>

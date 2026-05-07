@@ -1,6 +1,13 @@
 use crate::components::PostPayload;
 use crate::components::{card::Card, draggable_toc::DraggableToc, page::Page};
+use wasm_bindgen::prelude::*;
 use yew::prelude::*;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_name = typesetMath, catch)]
+    fn typeset_math(element: &web_sys::Element) -> Result<(), JsValue>;
+}
 
 #[derive(Clone, PartialEq)]
 pub struct SeriesNavItem {
@@ -21,6 +28,22 @@ pub struct PostViewProps {
 pub fn post_view(props: &PostViewProps) -> Html {
     let injected =
         yew::virtual_dom::VNode::from_html_unchecked(AttrValue::from(props.post.content.clone()));
+    let article_ref = use_node_ref();
+
+    {
+        let article_ref = article_ref.clone();
+        let content = props.post.content.clone();
+        let math_enabled = props.post.math;
+        use_effect_with(content, move |_| {
+            if math_enabled {
+                if let Some(article) = article_ref.cast::<web_sys::Element>() {
+                    let _ = typeset_math(&article);
+                }
+            }
+
+            || ()
+        });
+    }
 
     let on_home = {
         let cb = props.on_home.clone();
@@ -51,7 +74,9 @@ pub fn post_view(props: &PostViewProps) -> Html {
             <hr class="divider" />
             <DraggableToc headings={props.post.headings.clone()} />
             <Card class={classes!("article")}>
-                { injected }
+                <div ref={article_ref} class="article-content">
+                    { injected }
+                </div>
             </Card>
             {
                 if series_name.is_some()

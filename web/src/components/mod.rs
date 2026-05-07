@@ -31,6 +31,8 @@ pub struct PostPayload {
     pub metadata: FrontMatter,
     #[serde(default)]
     pub headings: Vec<PostHeading>,
+    #[serde(default)]
+    pub math: bool,
     pub content: String,
 }
 

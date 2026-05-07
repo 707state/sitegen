@@ -6,8 +6,9 @@ use comrak::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
+    borrow::Cow,
     collections::HashMap,
-    fs, option,
+    fs,
     path::{Path, PathBuf},
     time::UNIX_EPOCH,
 };
@@ -20,6 +21,8 @@ pub struct FrontMatter {
     #[serde(default)]
     pub series: Option<String>,
     pub date: NaiveDate,
+    #[serde(default)]
+    pub math: bool,
 }
 #[derive(Debug, Serialize)]
 pub struct Markdown {
@@ -28,6 +31,8 @@ pub struct Markdown {
     modified_at_unix: Option<u64>,
     metadata: FrontMatter,
     headings: Vec<PostHeading>,
+    // whether this post needs math rendering
+    math: bool,
     // content, think when dumping json, content should be a HTML string
     content: String,
 }
@@ -81,15 +86,12 @@ impl TryFrom<PathBuf> for Markdown {
         // 3) 读文件内容
         let input = fs::read_to_string(&path)
             .with_context(|| format!("failed to read: {}", path.display()))?;
-        // comrak options
-        let mut options = Options::default();
-        options.extension.front_matter_delimiter = Some("---".to_owned());
-        options.extension.table = true;
-        options.extension.math_dollars = true;
-        options.extension.math_code = true;
-        let arena = Arena::new();
-        let root = comrak::parse_document(&arena, &input, &options);
-        let mut front_matter_string = extract_front_matter_from_ast(root)
+        // First pass: parse with front_matter only to extract metadata
+        let mut pre_options = Options::default();
+        pre_options.extension.front_matter_delimiter = Some("---".to_owned());
+        let pre_arena = Arena::new();
+        let pre_root = comrak::parse_document(&pre_arena, &input, &pre_options);
+        let mut front_matter_string = extract_front_matter_from_ast(pre_root)
             .with_context(|| format!("missing front matter in: {}", path.display()))?;
         front_matter_string = front_matter_string
             .trim()
@@ -107,12 +109,28 @@ impl TryFrom<PathBuf> for Markdown {
                     front_matter_string
                 )
             })?;
+
+        let math_enabled = metadata.math;
+
+        // Second pass: full parse with math extensions conditionally enabled
+        let mut options = Options::default();
+        options.extension.front_matter_delimiter = Some("---".to_owned());
+        options.extension.table = true;
+        options.extension.math_dollars = math_enabled;
+        options.extension.math_code = math_enabled;
+        let arena = Arena::new();
+        let root = comrak::parse_document(&arena, &input, &options);
+
         let headings = extract_headings(root);
+        if math_enabled {
+            prepare_math_for_mathjax(root);
+        }
         Ok(Self {
             path,
             modified_at_unix,
             metadata,
             headings: headings.clone(),
+            math: math_enabled,
             content: {
                 let adapter = SyntectAdapter::new(Some("InspiredGitHub"));
                 let mut plugins = Plugins::default();
@@ -120,6 +138,11 @@ impl TryFrom<PathBuf> for Markdown {
                 let mut html_output = String::new();
                 format_html_with_plugins(root, &options, &mut html_output, &plugins)
                     .context("failed to render markdown to HTML")?;
+                let html_output = if math_enabled {
+                    render_math_code_blocks_for_mathjax(html_output)
+                } else {
+                    html_output
+                };
                 let html = inject_heading_ids(html_output, &headings);
                 // Make all links open in a new tab
                 html.replace(
@@ -343,6 +366,7 @@ fn collect_text<'a>(node: &'a comrak::nodes::AstNode<'a>) -> String {
     match &data.value {
         NodeValue::Text(text) => text.to_string(),
         NodeValue::Code(code) => code.literal.clone(),
+        NodeValue::Math(math) => math.literal.clone(),
         NodeValue::LineBreak | NodeValue::SoftBreak => " ".to_string(),
         _ => {
             drop(data);
@@ -353,6 +377,57 @@ fn collect_text<'a>(node: &'a comrak::nodes::AstNode<'a>) -> String {
             text
         }
     }
+}
+
+fn prepare_math_for_mathjax<'a>(node: &'a comrak::nodes::AstNode<'a>) {
+    let replacement = {
+        let data = node.data.borrow();
+        match &data.value {
+            NodeValue::Math(math) => Some(mathjax_delimited_math(&math.literal, math.display_math)),
+            _ => None,
+        }
+    };
+
+    if let Some(replacement) = replacement {
+        node.data.borrow_mut().value = NodeValue::Text(Cow::Owned(replacement));
+    }
+
+    for child in node.children() {
+        prepare_math_for_mathjax(child);
+    }
+}
+
+fn mathjax_delimited_math(literal: &str, display_math: bool) -> String {
+    if display_math {
+        format!("\\[{literal}\\]")
+    } else {
+        format!("\\({literal}\\)")
+    }
+}
+
+fn render_math_code_blocks_for_mathjax(html: String) -> String {
+    const OPEN: &str = "<pre><code class=\"language-math\" data-math-style=\"display\">";
+    const CLOSE: &str = "</code></pre>";
+
+    let mut rest = html.as_str();
+    let mut output = String::with_capacity(html.len());
+
+    while let Some(start) = rest.find(OPEN) {
+        output.push_str(&rest[..start]);
+        let math_start = start + OPEN.len();
+        let Some(end) = rest[math_start..].find(CLOSE) else {
+            output.push_str(&rest[start..]);
+            return output;
+        };
+        let math_end = math_start + end;
+        output.push_str("<div class=\"math math-display\">\\[");
+        output.push_str(&rest[math_start..math_end]);
+        output.push_str("\\]</div>");
+        rest = &rest[math_end + CLOSE.len()..];
+    }
+
+    output.push_str(rest);
+    output
 }
 
 fn slugify(input: &str) -> String {
@@ -397,4 +472,27 @@ fn inject_heading_ids(mut html: String, headings: &[PostHeading]) -> String {
     }
 
     html
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mathjax_delimiters_match_math_style() {
+        assert_eq!(mathjax_delimited_math("S", false), "\\(S\\)");
+        assert_eq!(mathjax_delimited_math("x^2 + y^2", true), "\\[x^2 + y^2\\]");
+    }
+
+    #[test]
+    fn math_code_blocks_become_mathjax_display_blocks() {
+        let html =
+            "<p>A</p>\n<pre><code class=\"language-math\" data-math-style=\"display\">x^2\n</code></pre>\n"
+                .to_string();
+
+        assert_eq!(
+            render_math_code_blocks_for_mathjax(html),
+            "<p>A</p>\n<div class=\"math math-display\">\\[x^2\n\\]</div>\n"
+        );
+    }
 }
