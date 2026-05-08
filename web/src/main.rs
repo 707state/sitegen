@@ -4,14 +4,16 @@ use crate::components::{
     search_view::SearchView, webgl_cube::WebglCube,
 };
 use gloo_net::http::Request;
-use serde::Deserialize;
+use idb_cache::{get_cached, set_cached};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use yew::prelude::*;
 use yew_router::prelude::*;
 
 pub mod components;
+pub mod idb_cache;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct IndexPayload {
     pub paragraph_under_certain_topic: HashMap<String, Vec<String>>,
     pub paragraph_under_certain_series: HashMap<String, Vec<String>>,
@@ -62,11 +64,27 @@ fn app_shell() -> Html {
         use_effect_with((), move |_| {
             wasm_bindgen_futures::spawn_local(async move {
                 is_loading.set(true);
-                let res = Request::get(&content_url("/index.json")).send().await;
+                let url = content_url("/index.json");
+
+                // Try cache first
+                if let Ok(Some(cached)) = get_cached::<IndexPayload>(&url).await {
+                    index.set(Some(cached));
+                    is_loading.set(false);
+                    return;
+                }
+
+                // Cache miss, fetch from network
+                let res = Request::get(&url).send().await;
 
                 match res {
                     Ok(resp) => match resp.json::<IndexPayload>().await {
-                        Ok(p) => index.set(Some(p)),
+                        Ok(p) => {
+                            // Store in IndexedDB cache
+                            if let Ok(bytes) = serde_json::to_vec(&p) {
+                                let _ = set_cached(&url, &bytes).await;
+                            }
+                            index.set(Some(p));
+                        }
                         Err(e) => error.set(Some(format!("JSON parse error: {e}"))),
                     },
                     Err(e) => {
@@ -95,10 +113,26 @@ fn app_shell() -> Html {
                 wasm_bindgen_futures::spawn_local(async move {
                     is_loading.set(true);
                     error.set(None);
-                    let res = Request::get(&content_url(&req_path)).send().await;
+                    let url = content_url(&req_path);
+
+                    // Try cache first
+                    if let Ok(Some(cached)) = get_cached::<PostPayload>(&url).await {
+                        post.set(Some(cached));
+                        is_loading.set(false);
+                        return;
+                    }
+
+                    // Cache miss, fetch from network
+                    let res = Request::get(&url).send().await;
                     match res {
                         Ok(resp) => match resp.json::<PostPayload>().await {
-                            Ok(p) => post.set(Some(p)),
+                            Ok(p) => {
+                                // Store in IndexedDB cache
+                                if let Ok(bytes) = serde_json::to_vec(&p) {
+                                    let _ = set_cached(&url, &bytes).await;
+                                }
+                                post.set(Some(p));
+                            }
                             Err(e) => error.set(Some(format!("JSON parse error (post): {e}"))),
                         },
                         Err(e) => error.set(Some(format!("Fetch error (post): {e}"))),

@@ -13,8 +13,8 @@ pub mod topic_card;
 pub mod webgl_cube;
 pub mod webgl_ring;
 use chrono::NaiveDate;
-use serde::Deserialize;
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+use serde::{Deserialize, Serialize};
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct FrontMatter {
     pub title: String,
     pub author: String,
@@ -24,7 +24,7 @@ pub struct FrontMatter {
     pub date: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct PostPayload {
     pub path: String,
     pub modified_at_unix: Option<u64>,
@@ -36,14 +36,14 @@ pub struct PostPayload {
     pub content: String,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct PostHeading {
     pub level: u8,
     pub text: String,
     pub id: String,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct TocItem {
     pub title: String,
     pub path: String,
