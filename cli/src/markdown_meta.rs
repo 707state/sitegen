@@ -23,6 +23,14 @@ pub struct FrontMatter {
     pub date: NaiveDate,
     #[serde(default)]
     pub math: bool,
+    #[serde(default = "default_done", deserialize_with = "deserialize_done")]
+    pub done: u8,
+}
+
+impl FrontMatter {
+    fn is_done(&self) -> bool {
+        self.done == 1
+    }
 }
 #[derive(Debug, Serialize)]
 pub struct Markdown {
@@ -165,7 +173,10 @@ struct SeriesPostEntry {
     date: NaiveDate,
 }
 
-fn build_markdown_and_write_json(path: &Path, dist_dir: &Path) -> anyhow::Result<BuiltMarkdown> {
+fn build_markdown_and_write_json(
+    path: &Path,
+    dist_dir: &Path,
+) -> anyhow::Result<Option<BuiltMarkdown>> {
     // 1) 转成 Markdown
     let one_md: Markdown = path
         .to_path_buf()
@@ -173,12 +184,15 @@ fn build_markdown_and_write_json(path: &Path, dist_dir: &Path) -> anyhow::Result
         .with_context(|| format!("convert markdown failed: {}", path.display()))?;
 
     // 2) 计算输出路径
-    let rel = path
-        .strip_prefix(std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
-        .unwrap_or(path);
+    let out_path = output_json_path(path, dist_dir);
 
-    let mut out_path = dist_dir.join(rel);
-    out_path.set_extension("json");
+    if !one_md.metadata.is_done() {
+        if out_path.exists() {
+            fs::remove_file(&out_path)
+                .with_context(|| format!("remove stale {} failed", out_path.display()))?;
+        }
+        return Ok(None);
+    }
 
     if let Some(parent) = out_path.parent() {
         fs::create_dir_all(parent)
@@ -190,10 +204,10 @@ fn build_markdown_and_write_json(path: &Path, dist_dir: &Path) -> anyhow::Result
     fs::write(&out_path, json)
         .with_context(|| format!("write to {} failed", out_path.display()))?;
 
-    Ok(BuiltMarkdown {
+    Ok(Some(BuiltMarkdown {
         markdown: one_md,
         out_path,
-    })
+    }))
 }
 impl TryFrom<Vec<PathBuf>> for Index {
     type Error = anyhow::Error;
@@ -209,14 +223,15 @@ impl TryFrom<Vec<PathBuf>> for Index {
                 continue;
             }
             if path.is_file() && is_markdown(&path) {
-                let built_md = build_markdown_and_write_json(&path, &dist_dir)?;
-                append_built_markdown(
-                    built_md,
-                    &dist_dir,
-                    &mut paragraph_under_certain_topic,
-                    &mut series_posts,
-                    &mut table_of_content,
-                );
+                if let Some(built_md) = build_markdown_and_write_json(&path, &dist_dir)? {
+                    append_built_markdown(
+                        built_md,
+                        &dist_dir,
+                        &mut paragraph_under_certain_topic,
+                        &mut series_posts,
+                        &mut table_of_content,
+                    );
+                }
                 continue;
             }
             for entry in walkdir::WalkDir::new(&path).follow_links(true) {
@@ -234,14 +249,15 @@ impl TryFrom<Vec<PathBuf>> for Index {
                 if !is_markdown(md_path) {
                     continue;
                 }
-                let built_md = build_markdown_and_write_json(md_path, &dist_dir)?;
-                append_built_markdown(
-                    built_md,
-                    &dist_dir,
-                    &mut paragraph_under_certain_topic,
-                    &mut series_posts,
-                    &mut table_of_content,
-                );
+                if let Some(built_md) = build_markdown_and_write_json(md_path, &dist_dir)? {
+                    append_built_markdown(
+                        built_md,
+                        &dist_dir,
+                        &mut paragraph_under_certain_topic,
+                        &mut series_posts,
+                        &mut table_of_content,
+                    );
+                }
             }
         }
         table_of_content.sort_by(|a, b| b.date.cmp(&a.date));
@@ -320,6 +336,32 @@ fn extract_front_matter_from_ast<'a>(root: &'a comrak::nodes::AstNode<'a>) -> Op
 fn relative_json_path(path: &Path, dist_dir: &Path) -> String {
     let rel = path.strip_prefix(dist_dir).unwrap_or(path);
     rel.to_string_lossy().into_owned()
+}
+
+fn output_json_path(path: &Path, dist_dir: &Path) -> PathBuf {
+    let rel = path
+        .strip_prefix(std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+        .unwrap_or(path);
+
+    let mut out_path = dist_dir.join(rel);
+    out_path.set_extension("json");
+    out_path
+}
+
+fn default_done() -> u8 {
+    1
+}
+
+fn deserialize_done<'de, D>(deserializer: D) -> std::result::Result<u8, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let done = u8::deserialize(deserializer)?;
+    if matches!(done, 0 | 1) {
+        Ok(done)
+    } else {
+        Err(serde::de::Error::custom("done must be 0 or 1"))
+    }
 }
 
 fn extract_headings<'a>(root: &'a comrak::nodes::AstNode<'a>) -> Vec<PostHeading> {
@@ -477,6 +519,57 @@ fn inject_heading_ids(mut html: String, headings: &[PostHeading]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn front_matter_done_defaults_to_complete() {
+        let metadata: FrontMatter = serde_yaml::from_str(
+            r#"
+title: Example
+author: Tester
+tags:
+  - rust
+date: 2026-05-17
+"#,
+        )
+        .unwrap();
+
+        assert_eq!(metadata.done, 1);
+        assert!(metadata.is_done());
+    }
+
+    #[test]
+    fn front_matter_done_zero_marks_incomplete() {
+        let metadata: FrontMatter = serde_yaml::from_str(
+            r#"
+title: Example
+author: Tester
+tags:
+  - rust
+date: 2026-05-17
+done: 0
+"#,
+        )
+        .unwrap();
+
+        assert!(!metadata.is_done());
+    }
+
+    #[test]
+    fn front_matter_done_rejects_invalid_values() {
+        let err = serde_yaml::from_str::<FrontMatter>(
+            r#"
+title: Example
+author: Tester
+tags:
+  - rust
+date: 2026-05-17
+done: 2
+"#,
+        )
+        .unwrap_err();
+
+        assert!(err.to_string().contains("done must be 0 or 1"));
+    }
 
     #[test]
     fn mathjax_delimiters_match_math_style() {
