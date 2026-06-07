@@ -135,7 +135,9 @@ body {
     display: block;
     object-fit: cover;
     box-shadow: 0 2px 6px rgba(20, 90, 130, 0.18);
-    transition: transform 180ms ease, box-shadow 180ms ease;
+    transition:
+        transform 180ms ease,
+        box-shadow 180ms ease;
 }
 
 .link-button:hover .post-cover {
@@ -1265,9 +1267,23 @@ body {
     cursor: grab;
     user-select: none;
     background:
-        radial-gradient(circle at 18% 24%, rgba(118, 211, 255, 0.22) 0%, rgba(118, 211, 255, 0.02) 22%, transparent 48%),
-        radial-gradient(circle at 80% 18%, rgba(255, 193, 112, 0.18) 0%, rgba(255, 193, 112, 0.01) 20%, transparent 44%),
-        radial-gradient(circle at 50% 120%, rgba(122, 89, 255, 0.12) 0%, transparent 34%),
+        radial-gradient(
+            circle at 18% 24%,
+            rgba(118, 211, 255, 0.22) 0%,
+            rgba(118, 211, 255, 0.02) 22%,
+            transparent 48%
+        ),
+        radial-gradient(
+            circle at 80% 18%,
+            rgba(255, 193, 112, 0.18) 0%,
+            rgba(255, 193, 112, 0.01) 20%,
+            transparent 44%
+        ),
+        radial-gradient(
+            circle at 50% 120%,
+            rgba(122, 89, 255, 0.12) 0%,
+            transparent 34%
+        ),
         linear-gradient(180deg, #061a2d 0%, #081426 46%, #030913 100%);
     box-shadow:
         0 28px 70px rgba(5, 18, 35, 0.24),
@@ -1284,8 +1300,16 @@ body {
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(circle at center, rgba(124, 210, 255, 0.08) 0%, transparent 32%),
-        radial-gradient(circle at 50% 64%, rgba(255, 255, 255, 0.04) 0%, transparent 22%);
+        radial-gradient(
+            circle at center,
+            rgba(124, 210, 255, 0.08) 0%,
+            transparent 32%
+        ),
+        radial-gradient(
+            circle at 50% 64%,
+            rgba(255, 255, 255, 0.04) 0%,
+            transparent 22%
+        );
     mix-blend-mode: screen;
     pointer-events: none;
 }
@@ -1299,23 +1323,75 @@ body {
 
 .ring-stars-a {
     background-image:
-        radial-gradient(circle at 10% 18%, rgba(255, 255, 255, 0.8) 0 1px, transparent 1.6px),
-        radial-gradient(circle at 24% 38%, rgba(164, 220, 255, 0.8) 0 1px, transparent 1.8px),
-        radial-gradient(circle at 31% 77%, rgba(255, 255, 255, 0.75) 0 1.2px, transparent 2px),
-        radial-gradient(circle at 55% 15%, rgba(255, 244, 215, 0.75) 0 1.2px, transparent 2px),
-        radial-gradient(circle at 72% 28%, rgba(163, 225, 255, 0.8) 0 1px, transparent 1.9px),
-        radial-gradient(circle at 81% 72%, rgba(255, 255, 255, 0.75) 0 1.4px, transparent 2px),
-        radial-gradient(circle at 92% 40%, rgba(255, 222, 193, 0.72) 0 1px, transparent 1.9px);
+        radial-gradient(
+            circle at 10% 18%,
+            rgba(255, 255, 255, 0.8) 0 1px,
+            transparent 1.6px
+        ),
+        radial-gradient(
+            circle at 24% 38%,
+            rgba(164, 220, 255, 0.8) 0 1px,
+            transparent 1.8px
+        ),
+        radial-gradient(
+            circle at 31% 77%,
+            rgba(255, 255, 255, 0.75) 0 1.2px,
+            transparent 2px
+        ),
+        radial-gradient(
+            circle at 55% 15%,
+            rgba(255, 244, 215, 0.75) 0 1.2px,
+            transparent 2px
+        ),
+        radial-gradient(
+            circle at 72% 28%,
+            rgba(163, 225, 255, 0.8) 0 1px,
+            transparent 1.9px
+        ),
+        radial-gradient(
+            circle at 81% 72%,
+            rgba(255, 255, 255, 0.75) 0 1.4px,
+            transparent 2px
+        ),
+        radial-gradient(
+            circle at 92% 40%,
+            rgba(255, 222, 193, 0.72) 0 1px,
+            transparent 1.9px
+        );
 }
 
 .ring-stars-b {
     background-image:
-        radial-gradient(circle at 16% 58%, rgba(255, 255, 255, 0.44) 0 1px, transparent 2.2px),
-        radial-gradient(circle at 38% 20%, rgba(167, 214, 255, 0.48) 0 1px, transparent 2.4px),
-        radial-gradient(circle at 48% 44%, rgba(255, 255, 255, 0.36) 0 0.9px, transparent 2.1px),
-        radial-gradient(circle at 67% 60%, rgba(165, 205, 255, 0.4) 0 1px, transparent 2.2px),
-        radial-gradient(circle at 76% 16%, rgba(255, 255, 255, 0.38) 0 1px, transparent 2px),
-        radial-gradient(circle at 88% 84%, rgba(255, 255, 255, 0.34) 0 0.9px, transparent 2px);
+        radial-gradient(
+            circle at 16% 58%,
+            rgba(255, 255, 255, 0.44) 0 1px,
+            transparent 2.2px
+        ),
+        radial-gradient(
+            circle at 38% 20%,
+            rgba(167, 214, 255, 0.48) 0 1px,
+            transparent 2.4px
+        ),
+        radial-gradient(
+            circle at 48% 44%,
+            rgba(255, 255, 255, 0.36) 0 0.9px,
+            transparent 2.1px
+        ),
+        radial-gradient(
+            circle at 67% 60%,
+            rgba(165, 205, 255, 0.4) 0 1px,
+            transparent 2.2px
+        ),
+        radial-gradient(
+            circle at 76% 16%,
+            rgba(255, 255, 255, 0.38) 0 1px,
+            transparent 2px
+        ),
+        radial-gradient(
+            circle at 88% 84%,
+            rgba(255, 255, 255, 0.34) 0 0.9px,
+            transparent 2px
+        );
 }
 
 .ring-canvas,
@@ -1344,7 +1420,11 @@ body {
     min-width: 96px;
     padding: 10px 12px;
     border-radius: 999px;
-    background: linear-gradient(180deg, rgba(244, 251, 255, 0.9), rgba(196, 233, 255, 0.58));
+    background: linear-gradient(
+        180deg,
+        rgba(244, 251, 255, 0.9),
+        rgba(196, 233, 255, 0.58)
+    );
     border: 1px solid rgba(162, 224, 255, 0.36);
     box-shadow:
         0 12px 24px rgba(5, 18, 35, 0.14),
@@ -1374,8 +1454,16 @@ body {
     padding: 10px 10px 9px;
     border-radius: 16px;
     background:
-        linear-gradient(180deg, rgba(251, 254, 255, 0.96), rgba(205, 237, 255, 0.78)),
-        radial-gradient(circle at top left, rgba(255, 255, 255, 0.52) 0%, transparent 40%);
+        linear-gradient(
+            180deg,
+            rgba(251, 254, 255, 0.96),
+            rgba(205, 237, 255, 0.78)
+        ),
+        radial-gradient(
+            circle at top left,
+            rgba(255, 255, 255, 0.52) 0%,
+            transparent 40%
+        );
     border: 1px solid rgba(171, 223, 255, 0.38);
     box-shadow:
         0 18px 36px rgba(5, 18, 35, 0.16),
@@ -1407,8 +1495,16 @@ body {
 
 .ring-month-card:hover {
     background:
-        linear-gradient(180deg, rgba(253, 254, 255, 0.98), rgba(214, 241, 255, 0.82)),
-        radial-gradient(circle at top left, rgba(255, 255, 255, 0.58) 0%, transparent 40%);
+        linear-gradient(
+            180deg,
+            rgba(253, 254, 255, 0.98),
+            rgba(214, 241, 255, 0.82)
+        ),
+        radial-gradient(
+            circle at top left,
+            rgba(255, 255, 255, 0.58) 0%,
+            transparent 40%
+        );
 }
 
 .ring-month-card::before {
@@ -1418,14 +1514,25 @@ body {
     left: -18px;
     width: 18px;
     height: 1px;
-    background: linear-gradient(90deg, rgba(136, 214, 255, 0.05), rgba(136, 214, 255, 0.75));
-    transition: width 220ms ease, left 220ms ease, right 220ms ease;
+    background: linear-gradient(
+        90deg,
+        rgba(136, 214, 255, 0.05),
+        rgba(136, 214, 255, 0.75)
+    );
+    transition:
+        width 220ms ease,
+        left 220ms ease,
+        right 220ms ease;
 }
 
 .ring-month-card.is-left::before {
     left: auto;
     right: -18px;
-    background: linear-gradient(90deg, rgba(136, 214, 255, 0.75), rgba(136, 214, 255, 0.05));
+    background: linear-gradient(
+        90deg,
+        rgba(136, 214, 255, 0.75),
+        rgba(136, 214, 255, 0.05)
+    );
 }
 
 .ring-month-card.is-expanded::before {
@@ -1641,4 +1748,21 @@ body {
         font-size: 10px;
         letter-spacing: 0.08em;
     }
+}
+
+.llm-tag {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #ffe0e0;
+    color: #cc2222;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    line-height: 1.4;
+}
+
+.llm-title {
+    color: #cc2222;
 }

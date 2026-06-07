@@ -66,6 +66,7 @@ pub fn archive_view(
                                     {
                                         let cover_key = it.path.clone();
                                         let title_text = it.title.clone();
+                                        let is_llm = it.llm == 1;
                                         html!{
                                             <li>
                                                 <button onclick={on_open} class="link-button">
@@ -73,7 +74,10 @@ pub fn archive_view(
                                                     <span class="archive-date">
                                                         { it.date.format("%m-%d").to_string() }
                                                     </span>
-                                                    <span>{ title_text }</span>
+                                                    if is_llm {
+                                                        <span class="llm-tag">{ "LLM" }</span>
+                                                    }
+                                                    <span class={if is_llm { "llm-title" } else { "" }}>{ title_text }</span>
                                                 </button>
                                             </li>
                                         }

@@ -50,4 +50,6 @@ pub struct TocItem {
     pub date: NaiveDate,
     #[serde(default)]
     pub route: String,
+    #[serde(default)]
+    pub llm: u8,
 }

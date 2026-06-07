@@ -25,6 +25,8 @@ pub struct FrontMatter {
     pub math: bool,
     #[serde(default = "default_done", deserialize_with = "deserialize_done")]
     pub done: u8,
+    #[serde(default, alias = "LLM", deserialize_with = "deserialize_llm")]
+    pub llm: u8,
 }
 
 impl FrontMatter {
@@ -64,6 +66,7 @@ pub struct TableOfContentItem {
     title: String,
     path: String,
     date: NaiveDate,
+    llm: u8,
 }
 pub fn is_markdown(path: &Path) -> bool {
     path.extension()
@@ -307,6 +310,7 @@ fn append_built_markdown(
         title,
         path: rel_path,
         date,
+        llm: built_md.markdown.metadata.llm,
     });
 }
 
@@ -361,6 +365,18 @@ where
         Ok(done)
     } else {
         Err(serde::de::Error::custom("done must be 0 or 1"))
+    }
+}
+
+fn deserialize_llm<'de, D>(deserializer: D) -> std::result::Result<u8, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let llm = u8::deserialize(deserializer)?;
+    if matches!(llm, 0 | 1) {
+        Ok(llm)
+    } else {
+        Err(serde::de::Error::custom("LLM must be 0 or 1"))
     }
 }
 
