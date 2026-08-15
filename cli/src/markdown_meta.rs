@@ -16,7 +16,9 @@ use std::{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FrontMatter {
     pub title: String,
+    #[serde(default)]
     pub author: String,
+    #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
     pub series: Option<String>,
@@ -59,6 +61,7 @@ pub struct Index {
     paragraph_under_certain_topic: HashMap<String, Vec<String>>,
     paragraph_under_certain_series: HashMap<String, Vec<String>>,
     table_of_content: Vec<TableOfContentItem>,
+    diary: Vec<TableOfContentItem>,
 }
 
 #[derive(Debug, Serialize)]
@@ -220,20 +223,31 @@ impl TryFrom<Vec<PathBuf>> for Index {
         let mut paragraph_under_certain_topic: HashMap<String, Vec<String>> = HashMap::new();
         let mut series_posts: HashMap<String, Vec<SeriesPostEntry>> = HashMap::new();
         let mut table_of_content: Vec<TableOfContentItem> = Vec::new();
+        // Diary is a special path: its posts live under the `diary/` route and
+        // are collected into the `diary` list instead of the blog index.
+        let mut diary_entries: Vec<TableOfContentItem> = Vec::new();
         for path in paths {
             if !path.exists() {
                 eprintln!("Skip: {} (not exists)", path.display());
                 continue;
             }
+            let is_diary = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n == "diary");
             if path.is_file() && is_markdown(&path) {
                 if let Some(built_md) = build_markdown_and_write_json(&path, &dist_dir)? {
-                    append_built_markdown(
-                        built_md,
-                        &dist_dir,
-                        &mut paragraph_under_certain_topic,
-                        &mut series_posts,
-                        &mut table_of_content,
-                    );
+                    if is_diary {
+                        diary_entries.push(diary_item(&built_md, &dist_dir));
+                    } else {
+                        append_built_markdown(
+                            built_md,
+                            &dist_dir,
+                            &mut paragraph_under_certain_topic,
+                            &mut series_posts,
+                            &mut table_of_content,
+                        );
+                    }
                 }
                 continue;
             }
@@ -241,7 +255,15 @@ impl TryFrom<Vec<PathBuf>> for Index {
                 let entry = match entry {
                     Ok(e) => e,
                     Err(e) => {
-                        eprintln!("Walk error under {}: {e}", path.display());
+                        // Broken dotfiles (e.g. Emacs `.#name.md` lock symlinks)
+                        // are not content; skip them silently.
+                        if !e
+                            .path()
+                            .map(is_hidden_file)
+                            .unwrap_or(false)
+                        {
+                            eprintln!("Walk error under {}: {e}", path.display());
+                        }
                         continue;
                     }
                 };
@@ -249,26 +271,32 @@ impl TryFrom<Vec<PathBuf>> for Index {
                     continue;
                 }
                 let md_path = entry.path();
-                if !is_markdown(md_path) {
+                if !is_markdown(md_path) || is_hidden_file(md_path) {
                     continue;
                 }
                 if let Some(built_md) = build_markdown_and_write_json(md_path, &dist_dir)? {
-                    append_built_markdown(
-                        built_md,
-                        &dist_dir,
-                        &mut paragraph_under_certain_topic,
-                        &mut series_posts,
-                        &mut table_of_content,
-                    );
+                    if is_diary {
+                        diary_entries.push(diary_item(&built_md, &dist_dir));
+                    } else {
+                        append_built_markdown(
+                            built_md,
+                            &dist_dir,
+                            &mut paragraph_under_certain_topic,
+                            &mut series_posts,
+                            &mut table_of_content,
+                        );
+                    }
                 }
             }
         }
         table_of_content.sort_by(|a, b| b.date.cmp(&a.date));
+        diary_entries.sort_by(|a, b| b.date.cmp(&a.date));
         let paragraph_under_certain_series = finalize_series_map(series_posts);
         let index = Self {
             table_of_content,
             paragraph_under_certain_topic,
             paragraph_under_certain_series,
+            diary: diary_entries,
         };
         let index_path = dist_dir.join("index.json");
         let index_json = serde_json::to_string_pretty(&index).context("serialize index failed")?;
@@ -312,6 +340,21 @@ fn append_built_markdown(
         date,
         llm: built_md.markdown.metadata.llm,
     });
+}
+
+fn diary_item(built_md: &BuiltMarkdown, dist_dir: &Path) -> TableOfContentItem {
+    TableOfContentItem {
+        title: built_md.markdown.metadata.title.clone(),
+        path: relative_json_path(&built_md.out_path, dist_dir),
+        date: built_md.markdown.metadata.date,
+        llm: built_md.markdown.metadata.llm,
+    }
+}
+
+fn is_hidden_file(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|n| n.starts_with('.'))
 }
 
 fn finalize_series_map(

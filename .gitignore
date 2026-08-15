@@ -4,5 +4,6 @@ web/dist
 dist/
 web/content
 web/images
+web/diary
 /*.sh
 /web/gensite.sh

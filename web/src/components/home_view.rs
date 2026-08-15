@@ -8,6 +8,7 @@ pub struct HomeViewProps {
     pub toc_items: Vec<TocItem>,
     pub topics: Vec<(String, Vec<String>)>,
     pub series: Vec<(String, Vec<String>)>,
+    pub diary: Vec<TocItem>,
     pub title_to_path: HashMap<String, String>,
     pub expanded_topics: HashSet<String>,
     pub expanded_series: HashSet<String>,
@@ -19,6 +20,7 @@ pub struct HomeViewProps {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum HomeMode {
+    Diary,
     Archive,
     Topics,
     Series,
@@ -30,6 +32,7 @@ pub fn home_view(
         toc_items,
         topics,
         series,
+        diary,
         title_to_path,
         expanded_topics,
         expanded_series,
@@ -39,6 +42,10 @@ pub fn home_view(
     }: &HomeViewProps,
 ) -> Html {
     let mode = use_state(|| HomeMode::Ring);
+    let set_diary = {
+        let mode = mode.clone();
+        Callback::from(move |_| mode.set(HomeMode::Diary))
+    };
     let set_archive = {
         let mode = mode.clone();
         Callback::from(move |_| mode.set(HomeMode::Archive))
@@ -56,6 +63,7 @@ pub fn home_view(
         Callback::from(move |_| mode.set(HomeMode::Series))
     };
     let header = {
+        let is_diary = *mode == HomeMode::Diary;
         let is_archive = *mode == HomeMode::Archive;
         let is_topics = *mode == HomeMode::Topics;
         let is_series = *mode == HomeMode::Series;
@@ -67,7 +75,8 @@ pub fn home_view(
                     <h1 class="title">{ "Home" }</h1>
                     <p class="subtitle">
                         {
-                            if is_archive { "Archive (by date)" }
+                            if is_diary { "Diary" }
+                            else if is_archive { "Archive (by date)" }
                             else if is_topics { "Browse by topic" }
                             else if is_series { "Browse by series" }
                             else { "Planet Ring" }
@@ -76,6 +85,13 @@ pub fn home_view(
                 </div>
 
                 <div class="home-mode-toggle">
+                    <button
+                        class="home-button"
+                        onclick={set_diary}
+                        style={ if is_diary { "" } else { "opacity:0.6; filter:saturate(0.6);" } }
+                    >
+                        { "Diary" }
+                    </button>
                     <button
                         class="home-button"
                         onclick={set_archive}
@@ -111,7 +127,14 @@ pub fn home_view(
     html! {
         <Page {header}>
         {
-            if *mode == HomeMode::Archive {
+            if *mode == HomeMode::Diary {
+                html! {
+                    <ArchiveView
+                        toc_items={diary.clone()}
+                        on_open_post={on_open_post.clone()}
+                    />
+                }
+            } else if *mode == HomeMode::Archive {
                 html! {
                     <ArchiveView
                         toc_items={toc_items.clone()}

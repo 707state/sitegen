@@ -18,6 +18,8 @@ pub struct IndexPayload {
     pub paragraph_under_certain_topic: HashMap<String, Vec<String>>,
     pub paragraph_under_certain_series: HashMap<String, Vec<String>>,
     pub table_of_content: Vec<TocItem>,
+    #[serde(default)]
+    pub diary: Vec<TocItem>,
 }
 
 #[derive(Clone, Routable, PartialEq, Eq, Debug)]
@@ -238,6 +240,7 @@ fn app_shell() -> Html {
                 .collect();
             series.sort_by(|a, b| a.0.cmp(&b.0));
             let toc_items = index_payload.table_of_content;
+            let diary = index_payload.diary;
             let title_to_path: HashMap<String, String> = toc_items
                 .iter()
                 .map(|item| (item.title.clone(), item.path.clone()))
@@ -262,6 +265,7 @@ fn app_shell() -> Html {
                             toc_items={toc_items.clone()}
                             topics={topics}
                             series={series}
+                            diary={diary}
                             title_to_path={title_to_path}
                             expanded_topics={expanded}
                             expanded_series={expanded_series}
